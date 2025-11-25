@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>ZIP File Reader & Verifier</title>
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+        <h1>🗂️ ZIP File Reader & Code Verifier</h1>
+
+        <!-- Upload Section -->
+        <div class="container">
+            <div class="upload-section">
+                <h2>📁 Select ZIP File</h2>
+                <p>Choose a ZIP file to read and explore its contents</p>
+
+                <form id="submitFile">
+                    <div class="file-input-wrapper">
+                        <input type="file" id="fileInput" name="fileInput" accept=".zip" class="file-input" />
+                        <button type="submit" class="upload-btn" id="uploadBtn">Read ZIP File</button>
+                    </div>
+                </form>
+
+                <div class="loading" id="loading">📖 Reading ZIP file...</div>
+
+                <div id="errorMessage"></div>
+                <div id="successMessage"></div>
+            </div>
+        </div>
+
+        <!-- ZIP Content Display -->
+        <div class="container zip-content" id="zipContent">
+            <div id="zipInfo"></div>
+
+            <h3>📂 File Structure</h3>
+            <div class="file-tree" id="fileTree"></div>
+
+            <div class="file-content" id="fileContent">
+                <div class="content-header" id="contentHeader"></div>
+                <div class="content-body" id="contentBody"></div>
+            </div>
+        </div>
+
+        <!-- Test Runner Section -->
+        <div class="container test-runner" id="testRunnerContainer">
+            <h2>🧪 Code Test Runner</h2>
+            <p>Upload your assignment ZIP file to verify your code against test cases</p>
+
+            <div id="testResults"></div>
+        </div>
+
+        <!-- Templates -->
+        <template id="message-template">
+            <div class="message"></div>
+        </template>
+
+        <template id="zip-info-template">
+            <div class="zip-info">
+                <h3>📊 ZIP Information</h3>
+                <p><strong>Filename:</strong> <span class="zip-filename"></span></p>
+                <p><strong>File Size:</strong> <span class="zip-filesize"></span></p>
+                <p><strong>Total Entries:</strong> <span class="zip-total-entries"></span></p>
+                <p><strong>Folders:</strong> <span class="zip-folders"></span></p>
+                <p><strong>Files:</strong> <span class="zip-files"></span></p>
+                <p><strong>Last Modified:</strong> <span class="zip-last-modified"></span></p>
+            </div>
+        </template>
+
+        <template id="file-item-template">
+            <div class="file-item">
+                <span class="file-icon"></span>
+                <span class="file-name"></span>
+                <span class="file-date"></span>
+                <span class="file-size"></span>
+                <div class="file-actions">
+                    <button class="btn btn--view">View</button>
+                    <button class="btn btn--download">Download</button>
+                </div>
+            </div>
+        </template>
+
+        <template id="assignment-summary-template">
+            <div>
+                <h3>📊 Test Results</h3>
+                <div class="assignment-summary">
+                    <p><strong>📁 Assignment Structure Found:</strong></p>
+                    <ul class="questions-list"></ul>
+                    <p><strong>Total Questions:</strong> <span class="total-questions"></span></p>
+                </div>
+            </div>
+        </template>
+
+        <template id="structure-error-template">
+            <div class="test-result">
+                <div class="test-header test-header--error">❌ Invalid ZIP Structure</div>
+                <div class="test-case test-error"><strong>Error:</strong> <span class="error-message"></span></div>
+                <div class="test-case"><strong>💡 Suggestion:</strong> <span class="error-suggestion"></span></div>
+                <div class="test-case test-case--structure-info structure-comparison">
+                    <strong>❌ Found structure:</strong>
+                    <ul class="detected-paths list-style-none monospace"></ul>
+                    <strong>✅ Expected structure:</strong>
+                    <ul class="expected-paths list-style-none monospace">
+                        <li><code class="code-path code-path--correct">ProblemSetName/q1/code.js</code></li>
+                        <li><code class="code-path code-path--correct">ProblemSetName/q1/testcases.js</code></li>
+                        <li><code class="code-path code-path--correct">ProblemSetName/q2/code.js</code></li>
+                        <li><code class="code-path code-path--correct">...</code></li>
+                    </ul>
+                </div>
+            </div>
+        </template>
+
+        <!-- Scripts -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+        <script src="js/ui-utils.js"></script>
+        <script src="js/file-utils.js"></script>
+        <script src="js/console-manager.js"></script>
+        <script src="js/test-executor.js"></script>
+        <script src="js/assignment-grader.js"></script>
+        <script src="js/upload-handler.js"></script>
+    </body>
+</html>
