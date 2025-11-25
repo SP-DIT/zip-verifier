@@ -1,0 +1,16 @@
+{
+    "name": "fop-zip-verifier",
+    "version": "1.0.0",
+    "description": "ZIP file verifier for student assignments",
+    "scripts": {
+        "test": "playwright test",
+        "test:headed": "playwright test --headed",
+        "test:debug": "playwright test --debug",
+        "test:ci": "playwright test --reporter=junit",
+        "serve": "npx http-server . -p 3000"
+    },
+    "devDependencies": {
+        "@playwright/test": "^1.40.0",
+        "http-server": "^14.1.1"
+    }
+}
