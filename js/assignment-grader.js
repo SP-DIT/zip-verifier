@@ -6,11 +6,22 @@ class AssignmentGrader {
         this.document = document;
     }
 
+    // Normalize paths to use forward slashes for consistent processing
+    normalizePath(path) {
+        return path.replace(/\\/g, '/');
+    }
+
+    // Create regex pattern that matches both / and \ path separators
+    createPathRegex(pattern) {
+        return new RegExp(pattern.replace(/\//g, '[/\\\\]'));
+    }
+
     detectAssignmentStructure(zip) {
         const files = Object.keys(zip.files);
         const hasCodeFiles = files.some((file) => file.includes('code.js'));
         const hasTestFiles = files.some((file) => file.includes('testcases.js'));
-        const hasQuestionFolders = files.some((file) => /\/q\d+\//.test(file));
+        const questionFolderRegex = this.createPathRegex('/q\\d+/');
+        const hasQuestionFolders = files.some((file) => questionFolderRegex.test(file));
         return hasCodeFiles && hasTestFiles && hasQuestionFolders;
     }
 
@@ -19,14 +30,16 @@ class AssignmentGrader {
 
         const hasCodeFiles = files.some((file) => file.includes('code.js'));
         const hasTestFiles = files.some((file) => file.includes('testcases.js'));
-        const hasQuestionFolders = files.some((file) => /\/q\d+\//.test(file));
+        const questionFolderRegex = this.createPathRegex('/q\\d+/');
+        const hasQuestionFolders = files.some((file) => questionFolderRegex.test(file));
 
         const codeFilePaths = files.filter((file) => file.includes('code.js'));
         const testFilePaths = files.filter((file) => file.includes('testcases.js'));
 
         if (hasCodeFiles && hasTestFiles) {
             const extraNested = codeFilePaths.some((path) => {
-                const depth = path.split('/').length;
+                const normalizedPath = this.normalizePath(path);
+                const depth = normalizedPath.split('/').length;
                 return depth > 3;
             });
 
@@ -40,8 +53,9 @@ class AssignmentGrader {
                 };
             }
 
+            const correctStructureRegex = this.createPathRegex('\\d+[A-Z].*/q\\d+/code\\.js$');
             const correctStructure = codeFilePaths.some((path) => {
-                return /\d+[A-Z].*\/q\d+\/code\.js$/.test(path);
+                return correctStructureRegex.test(path);
             });
 
             if (!correctStructure) {
@@ -108,7 +122,6 @@ class AssignmentGrader {
         const clone = template.content.cloneNode(true);
 
         clone.querySelector('.error-message').textContent = analysis.error;
-        clone.querySelector('.error-suggestion').textContent = analysis.suggestion;
 
         const pathsList = clone.querySelector('.detected-paths');
         const expectedList = clone.querySelector('.expected-paths');
@@ -132,17 +145,33 @@ class AssignmentGrader {
         const files = Object.keys(zip.files);
         const structure = [];
 
+        const problemSetRegex = this.createPathRegex('\\d+[A-Z].*/q\\d+/');
         const problemSetFolders = [
-            ...new Set(files.filter((file) => /\d+[A-Z].*\/q\d+\//.test(file)).map((file) => file.split('/')[0])),
+            ...new Set(
+                files
+                    .filter((file) => problemSetRegex.test(file))
+                    .map((file) => {
+                        const normalizedPath = this.normalizePath(file);
+                        return normalizedPath.split('/')[0];
+                    }),
+            ),
         ];
 
         problemSetFolders.forEach((problemSet) => {
+            // Create patterns to match both separator types
+            const questionSearchPattern1 = problemSet + '/q';
+            const questionSearchPattern2 = problemSet + '\\q';
+
             const questions = [
                 ...new Set(
                     files
-                        .filter((file) => file.startsWith(problemSet + '/q'))
+                        .filter((file) => {
+                            const normalizedFile = this.normalizePath(file);
+                            return normalizedFile.startsWith(problemSet + '/q');
+                        })
                         .map((file) => {
-                            const parts = file.split('/');
+                            const normalizedFile = this.normalizePath(file);
+                            const parts = normalizedFile.split('/');
                             return parts.length >= 2 ? parts[1] : null;
                         })
                         .filter((q) => q && q.startsWith('q')),
@@ -150,10 +179,17 @@ class AssignmentGrader {
             ];
 
             questions.forEach((question) => {
-                const codeFile = `${problemSet}/${question}/code.js`;
-                const testFile = `${problemSet}/${question}/testcases.js`;
+                // Find the actual files using both separators
+                const possibleCodeFiles = [`${problemSet}/${question}/code.js`, `${problemSet}\\${question}\\code.js`];
+                const possibleTestFiles = [
+                    `${problemSet}/${question}/testcases.js`,
+                    `${problemSet}\\${question}\\testcases.js`,
+                ];
 
-                if (files.includes(codeFile) && files.includes(testFile)) {
+                const codeFile = possibleCodeFiles.find((f) => files.includes(f));
+                const testFile = possibleTestFiles.find((f) => files.includes(f));
+
+                if (codeFile && testFile) {
                     structure.push({
                         problemSet,
                         question,
