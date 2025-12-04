@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/4.0.0/github-markdown.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release/build/styles/default.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/markdown-it-texmath/css/texmath.min.css">
+<link rel="stylesheet" href="file:////home/codespace/.vscode-remote/extensions/goessner.mdmath-2.7.4/themes/default/style.css">
+
+</head>
+<body class="markdown-body">
+<h2 dir="auto" id="inspirationproblem-statement">Inspiration/Problem statement?</h2>
+<p dir="auto"><img src="./screenshots/landing.png" alt="" data-src="./screenshots/landing.png">
+<a href="https://sp-dit.github.io/zip-verifier/">Website</a></p>
+<p dir="auto">During FOP's MST/EST, it is a common issue that students submit the wrong zip file.</p>
+<p dir="auto">That is, at the end of the test, they are supposed to zip up their code and submit on brightspace. In a few occasion, students wrongly submitted the original, blank, zip instead of the one with their code.</p>
+<p dir="auto">As per our current policy, doing so results in scoring 0 for the component with no second chance given.</p>
+<h2 dir="auto" id="what-it-does">What it does</h2>
+<p dir="auto">Hence, this tool seeks provide students a chance to first verify their submission. It allows them to upload their zip file and have their code executed against the test cases to verify their results before the proceed to submit on brightspace.</p>
+<h2 dir="auto" id="how-we-built-it">How we built it</h2>
+<ul dir="auto">
+<li dir="auto">This app is purely frontend only. That is, the zip they submitted is unzipped and processed solely within their browser and not sent to any other backend server.</li>
+<li dir="auto">It utilizes <a href="https://stuk.github.io/jszip/">jszip</a> to perform the zipping and unzipping</li>
+<li dir="auto">Hosting: As this is simply a frontend application, it is hosted on GitHub pages.</li>
+<li dir="auto">To test the correctness of the application, playwright script was written to simulate the submission of various type of zips, including those that works, those that work partially, those with incorrect file structure, codes that doesn't execute, and codes with infinite loop.</li>
+<li dir="auto">Whenever changes is pushed to GitHub, these test would run automatically, and deploy on if the tests passes.</li>
+<li dir="auto">Majority of the code were written by GitHub Copilot Pro, making use of Context7 MCP for up-to-date documentation, and Playwright MCP for copilot to test and verify the application.</li>
+</ul>
+<h2 dir="auto" id="challenges-we-ran-into">Challenges we ran into</h2>
+<ul dir="auto">
+<li dir="auto">
+<p dir="auto">At the start, Copilot generated the entire project within a single HTML file, this made it difficult for me to read and understand the code base. It also became too long for Copilot to fit the entire thing within the context window, causing it to give rubbish every once in a while. I decided instead of refactor the file into several smaller classes.</p>
+</li>
+<li dir="auto">
+<p dir="auto">During the refactoring, as I did not give instruction on how I wanted it to be structured, copilot went with the classes approach, which honestly wasn't my preference but I didn't bother much with it. What I controlled though was that it initially referenced other classes through the global scope and through static methods. Recognizing that such setup is hard to test in isolation, I requested it change to a format that allows for dependency injection.</p>
+</li>
+<li dir="auto">
+<p dir="auto">It was also unaware of the idea that students of different operating systems may be using the app, hence the slash (<code>/</code>) in the file path may differ (e.g. windows uses <code>/</code> whereas linux uses <code>\</code>). This breaks some of the scenarios, but thankfully it's easy enough to implement a intermediate processing step to convert all such slashes.</p>
+</li>
+</ul>
+<h2 dir="auto" id="accomplishments-that-were-proud-of">Accomplishments that we're proud of</h2>
+<ul dir="auto">
+<li dir="auto">
+<p dir="auto">Not my accomplishment, but quite amazed (but annoyed at the same time), but the additional scope that copilot introduced was pretty helpful. For example, I didn't intended to display all the files in the zip, just execute it against the testcases and report the result was all I wanted. But it went ahead to introduce these feature, even including things like tagging a specific emoji to different file type.</p>
+</li>
+<li dir="auto">
+<p dir="auto">But otherwise, was quite proud to finish a version of the app within 1 afternoon.</p>
+</li>
+</ul>
+<h2 dir="auto" id="what-we-learned">What we learned</h2>
+<ul dir="auto">
+<li dir="auto">Scoping and controlling the set of task and context is important, if not the copilot will start going rouge and waste all the credits on unnecessary scopes.</li>
+<li dir="auto">But this also meant the need for clear conceptual/architectural overview of the application before we start providing instruction to the AI agent.</li>
+<li dir="auto">MCPs for the win!</li>
+</ul>
+<h2 dir="auto" id="whats-next-for-untitled">What's next for Untitled</h2>
+<ul dir="auto">
+<li dir="auto">Probably to improve the usability and clarity. One potential misunderstanding is that students may think that using this tool meant that it has been uploaded. Probably has to make clear that this is just to verify the zip.</li>
+</ul>
+<h2 dir="auto" id="media">Media</h2>
+<p dir="auto"><img src="./screenshots/landing.png" alt="" data-src="./screenshots/landing.png">
+<img src="./screenshots/successfully loaded.png" alt="" data-src="./screenshots/successfully%20loaded.png">
+<img src="./screenshots/all-correct.png" alt="" data-src="./screenshots/all-correct.png">
+<img src="./screenshots/all-wrong.png" alt="" data-src="./screenshots/all-wrong.png"></p>
+
+</body>
+</html>
