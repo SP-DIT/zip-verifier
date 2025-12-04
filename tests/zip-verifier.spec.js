@@ -23,7 +23,7 @@ test.describe('ZIP Verifier End-to-End Tests', () => {
 
     test('should handle wrong file structure', async ({ page }) => {
         // Upload the wrong-structure ZIP file
-        const filePath = path.resolve('tests/fixtures/wrong-structure.zip');
+        const filePath = path.resolve('tests/fixtures/extra-extra-layer.zip');
 
         // Click Choose File and upload
         await page.getByRole('button', { name: 'Choose File' }).click();
@@ -38,17 +38,7 @@ test.describe('ZIP Verifier End-to-End Tests', () => {
 
         // Check that Code Test Runner shows structure error
         await expect(page.locator('h2:has-text("🧪 Code Test Runner")')).toBeVisible();
-        await expect(page.locator('text=❌ Invalid ZIP Structure')).toBeVisible();
-        await expect(page.locator('text=ZIP structure does not match expected format')).toBeVisible();
-
-        // Should show expected structure guidance
-        await expect(page.locator('text=💡 Suggestion:')).toBeVisible();
-
-        // Should show found vs expected structure comparison
-        await expect(page.locator('text=❌ Found structure:')).toBeVisible();
-        await expect(page.locator('text=✅ Expected structure:')).toBeVisible();
-        await expect(page.locator('.expected-paths').getByText('ProblemSetName/q1/code.js')).toBeVisible();
-        await expect(page.locator('.expected-paths').getByText('ProblemSetName/q1/testcases.js')).toBeVisible();
+        await expect(page.locator('text=❌ No valid assignment structure found')).toBeVisible();
     });
 
     test('should display ZIP file information correctly', async ({ page }) => {

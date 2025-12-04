@@ -16,6 +16,47 @@ class AssignmentGrader {
         return new RegExp(pattern.replace(/\//g, '[/\\\\]'));
     }
 
+    // Detect if there's an extra parent folder containing all assignment files
+    detectExtraFolder(zip) {
+        const files = Object.keys(zip.files);
+        const assignmentFiles = files.filter((file) => file.includes('code.js') || file.includes('testcases.js'));
+
+        if (assignmentFiles.length === 0) {
+            return '';
+        }
+
+        // Get all normalized paths
+        const normalizedPaths = assignmentFiles.map((file) => this.normalizePath(file));
+
+        // Check if all paths start with the same folder
+        const firstPath = normalizedPaths[0];
+        const pathParts = firstPath.split('/');
+
+        // If already at root level (depth <= 3), no extra folder
+        if (pathParts.length <= 3) {
+            return '';
+        }
+
+        // Check if all paths share the same first folder
+        const potentialBaseFolder = pathParts[0];
+        const allShareSameBase = normalizedPaths.every((path) => path.startsWith(potentialBaseFolder + '/'));
+
+        if (allShareSameBase) {
+            // Verify that removing this folder gives us valid structure
+            const strippedPaths = normalizedPaths.map((path) => path.substring(potentialBaseFolder.length + 1));
+
+            // Check if stripped paths match expected structure
+            const correctStructureRegex = this.createPathRegex('\\d+[A-Z].*/q\\d+/(code|testcases)\\.js$');
+            const hasValidStructure = strippedPaths.some((path) => correctStructureRegex.test(path));
+
+            if (hasValidStructure) {
+                return potentialBaseFolder + '/';
+            }
+        }
+
+        return '';
+    }
+
     detectAssignmentStructure(zip) {
         const files = Object.keys(zip.files);
         const hasCodeFiles = files.some((file) => file.includes('code.js'));
@@ -37,24 +78,18 @@ class AssignmentGrader {
         const testFilePaths = files.filter((file) => file.includes('testcases.js'));
 
         if (hasCodeFiles && hasTestFiles) {
-            const extraNested = codeFilePaths.some((path) => {
+            // Detect if there's an extra parent folder
+            const baseFolder = this.detectExtraFolder(zip);
+
+            // Create paths for validation (strip base folder if present)
+            const validationPaths = codeFilePaths.map((path) => {
                 const normalizedPath = this.normalizePath(path);
-                const depth = normalizedPath.split('/').length;
-                return depth > 3;
+                return baseFolder ? normalizedPath.substring(baseFolder.length) : normalizedPath;
             });
 
-            if (extraNested) {
-                return {
-                    valid: false,
-                    error: 'ZIP structure has extra folder levels',
-                    suggestion:
-                        'Please zip the assignment folder directly (e.g., 5MockMSTSetA.zip) without additional parent folders',
-                    detectedPaths: codeFilePaths.slice(0, 3),
-                };
-            }
-
             const correctStructureRegex = this.createPathRegex('\\d+[A-Z].*/q\\d+/code\\.js$');
-            const correctStructure = codeFilePaths.some((path) => {
+
+            const correctStructure = validationPaths.some((path) => {
                 return correctStructureRegex.test(path);
             });
 
@@ -62,7 +97,8 @@ class AssignmentGrader {
                 return {
                     valid: false,
                     error: 'ZIP structure does not match expected format',
-                    suggestion: 'Expected structure: ProblemSetName/q1/code.js, ProblemSetName/q1/testcases.js',
+                    suggestion:
+                        'Expected structure: ProblemSetName/q1/code.js, ProblemSetName/q1/testcases.js (optionally within an extra folder)',
                     detectedPaths: codeFilePaths.slice(0, 3),
                 };
             }
@@ -145,33 +181,43 @@ class AssignmentGrader {
         const files = Object.keys(zip.files);
         const structure = [];
 
+        // Detect base folder that should be stripped
+        const baseFolder = this.detectExtraFolder(zip);
+
         const problemSetRegex = this.createPathRegex('\\d+[A-Z].*/q\\d+/');
+
         const problemSetFolders = [
             ...new Set(
                 files
                     .filter((file) => problemSetRegex.test(file))
                     .map((file) => {
                         const normalizedPath = this.normalizePath(file);
-                        return normalizedPath.split('/')[0];
+                        // Strip base folder if present
+                        const workingPath = baseFolder ? normalizedPath.substring(baseFolder.length) : normalizedPath;
+                        return workingPath.split('/')[0];
                     }),
             ),
         ];
 
         problemSetFolders.forEach((problemSet) => {
-            // Create patterns to match both separator types
-            const questionSearchPattern1 = problemSet + '/q';
-            const questionSearchPattern2 = problemSet + '\\q';
-
             const questions = [
                 ...new Set(
                     files
                         .filter((file) => {
                             const normalizedFile = this.normalizePath(file);
-                            return normalizedFile.startsWith(problemSet + '/q');
+                            // Strip base folder if present for matching
+                            const workingPath = baseFolder
+                                ? normalizedFile.substring(baseFolder.length)
+                                : normalizedFile;
+                            return workingPath.startsWith(problemSet + '/q');
                         })
                         .map((file) => {
                             const normalizedFile = this.normalizePath(file);
-                            const parts = normalizedFile.split('/');
+                            // Strip base folder if present
+                            const workingPath = baseFolder
+                                ? normalizedFile.substring(baseFolder.length)
+                                : normalizedFile;
+                            const parts = workingPath.split('/');
                             return parts.length >= 2 ? parts[1] : null;
                         })
                         .filter((q) => q && q.startsWith('q')),
@@ -179,11 +225,15 @@ class AssignmentGrader {
             ];
 
             questions.forEach((question) => {
-                // Find the actual files using both separators
-                const possibleCodeFiles = [`${problemSet}/${question}/code.js`, `${problemSet}\\${question}\\code.js`];
+                // Build possible file paths with base folder
+                const basePath = baseFolder || '';
+                const possibleCodeFiles = [
+                    `${basePath}${problemSet}/${question}/code.js`,
+                    `${basePath}${problemSet}\\${question}\\code.js`,
+                ];
                 const possibleTestFiles = [
-                    `${problemSet}/${question}/testcases.js`,
-                    `${problemSet}\\${question}\\testcases.js`,
+                    `${basePath}${problemSet}/${question}/testcases.js`,
+                    `${basePath}${problemSet}\\${question}\\testcases.js`,
                 ];
 
                 const codeFile = possibleCodeFiles.find((f) => files.includes(f));
