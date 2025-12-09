@@ -372,11 +372,6 @@ class ProgressManager {
                 return;
             }
 
-            // Debug: Log the cloned content structure
-            console.log('Cloned template content:', clone);
-            console.log('Template innerHTML:', template.innerHTML);
-            console.log('Template content:', template.content);
-
             const item = clone.querySelector('.student-progress-item');
             const studentInfo = clone.querySelector('.student-info');
             const name = clone.querySelector('.student-name');
