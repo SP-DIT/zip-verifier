@@ -34,7 +34,7 @@ class TestExecutor {
 
                     let result;
                     try {
-                        result = codeFunction.fn(...input);
+                        result = this.executeWithTimeout(codeFunction.fn, input);
                     } finally {
                         // Always restore original console.log
                         this.consoleManager.restore();
@@ -79,6 +79,16 @@ class TestExecutor {
         }
     }
 
+    // Execute function with timeout to prevent infinite loops
+    executeWithTimeout(fn, args) {
+        try {
+            const result = fn(...args);
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
     parseTestModule(testContent) {
         try {
             const moduleCode = testContent.replace(/module\.exports\s*=/, 'var testModule =');
@@ -100,8 +110,23 @@ class TestExecutor {
             const functionName = exportMatch[1];
             const codeWithoutExports = codeContent.replace(/module\.exports\s*=.*?;?/g, '');
 
+            // Instrument code with timeout checks to prevent infinite loops
+            const instrumentedCode = this.instrumentCodeWithTimeoutChecks(codeWithoutExports);
+
             const executionCode = `
-                ${codeWithoutExports}
+                var __executionStartTime = Date.now();
+                var __timeoutMs = 2000; // 2 seconds timeout
+                var __checkTimeoutCounter = 0;
+
+                function __checkTimeout() {
+                    __checkTimeoutCounter++;
+                    // Check every single iteration for immediate detection
+                    if (Date.now() - __executionStartTime > __timeoutMs) {
+                        throw new Error('Time Limit Exceeded: Code execution timed out after ' + __timeoutMs + 'ms');
+                    }
+                }
+
+                ${instrumentedCode}
                 if (typeof ${functionName} !== 'function') {
                     throw new Error('${functionName} is not defined as a function');
                 }
@@ -122,6 +147,20 @@ class TestExecutor {
         } catch (error) {
             return { success: false, error: error.message };
         }
+    }
+
+    // Instrument code with timeout checks in loops
+    instrumentCodeWithTimeoutChecks(code) {
+        // Add timeout checks to for loops
+        code = code.replace(/for\s*\(\s*([^;]*);([^;]*);([^)]*)\)\s*\{/g, 'for ($1; $2; $3) { __checkTimeout();');
+
+        // Add timeout checks to while loops
+        code = code.replace(/while\s*\(\s*([^)]+)\)\s*\{/g, 'while ($1) { __checkTimeout();');
+
+        // Add timeout checks to do-while loops
+        code = code.replace(/do\s*\{/g, 'do { __checkTimeout();');
+
+        return code;
     }
 
     compareResults(result, expected, options) {
