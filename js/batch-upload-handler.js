@@ -257,6 +257,10 @@ class BatchUploadHandler {
     }
 
     clearElement(element) {
+        if (!element) {
+            console.error('Cannot clear null element');
+            return;
+        }
         while (element.firstChild) {
             element.removeChild(element.firstChild);
         }
@@ -271,6 +275,15 @@ class ProgressManager {
     }
 
     initialize(submissions, container) {
+        if (!container) {
+            console.error('Container element is null in ProgressManager.initialize');
+            return;
+        }
+        if (!submissions) {
+            console.error('Submissions array is null in ProgressManager.initialize');
+            return;
+        }
+
         this.submissions = submissions;
         this.container = container;
         this.render();
@@ -278,7 +291,16 @@ class ProgressManager {
 
     render() {
         const template = document.getElementById('progress-dashboard-template');
+        if (!template) {
+            console.error('Progress dashboard template not found');
+            return;
+        }
+
         const clone = template.content.cloneNode(true);
+        if (!clone) {
+            console.error('Failed to clone progress dashboard template');
+            return;
+        }
 
         this.clearElement(this.container);
         this.container.appendChild(clone);
@@ -339,27 +361,125 @@ class ProgressManager {
 
         submissions.forEach((submission) => {
             const template = document.getElementById('student-progress-item-template');
-            const clone = template.content.cloneNode(true);
-
-            const item = clone.querySelector('.student-progress-item');
-            const name = clone.querySelector('.student-name');
-            const status = clone.querySelector('.student-status');
-            const details = clone.querySelector('.student-details');
-
-            name.textContent = submission.id;
-            status.textContent = this.formatStatus(submission.status);
-            status.className = `student-status ${submission.status}`;
-
-            let detailText = submission.fileName;
-            if (submission.status === 'completed' && submission.results) {
-                detailText += ` - Score: ${submission.results.percentage}%`;
-            } else if (submission.status === 'error') {
-                detailText += ` - Error: ${submission.error}`;
+            if (!template) {
+                console.error('Student progress item template not found');
+                return;
             }
 
-            details.textContent = detailText;
+            const clone = template.content.cloneNode(true);
+            if (!clone) {
+                console.error('Failed to clone template content');
+                return;
+            }
 
-            list.appendChild(clone);
+            // Debug: Log the cloned content structure
+            console.log('Cloned template content:', clone);
+            console.log('Template innerHTML:', template.innerHTML);
+            console.log('Template content:', template.content);
+
+            const item = clone.querySelector('.student-progress-item');
+            const studentInfo = clone.querySelector('.student-info');
+            const name = clone.querySelector('.student-name');
+            const status = clone.querySelector('.student-status');
+            const summary = clone.querySelector('.student-summary');
+            const detailedResults = clone.querySelector('.student-detailed-results');
+            const expandBtn = clone.querySelector('.expand-btn');
+
+            // Check if all required elements exist with detailed logging
+            const missingElements = [];
+            if (!item) missingElements.push('student-progress-item');
+            if (!studentInfo) missingElements.push('student-info');
+            if (!name) missingElements.push('student-name');
+            if (!status) missingElements.push('student-status');
+            if (!summary) missingElements.push('student-summary');
+            if (!detailedResults) missingElements.push('student-detailed-results');
+            if (!expandBtn) missingElements.push('expand-btn');
+
+            if (missingElements.length > 0) {
+                console.error('Missing template elements:', missingElements, 'for submission:', submission.id);
+                return;
+            }
+
+            // Set student ID for reference
+            if (studentInfo && submission.id) {
+                studentInfo.setAttribute('data-student-id', submission.id);
+            }
+
+            if (name) {
+                try {
+                    name.textContent = submission.id || 'Unknown';
+                } catch (e) {
+                    console.error(
+                        'Error setting name textContent:',
+                        e,
+                        'name element:',
+                        name,
+                        'submission.id:',
+                        submission.id,
+                    );
+                    throw e;
+                }
+            }
+            if (status) {
+                try {
+                    status.textContent = this.formatStatus(submission.status);
+                    status.className = `student-status ${submission.status}`;
+                } catch (e) {
+                    console.error(
+                        'Error setting status textContent:',
+                        e,
+                        'status element:',
+                        status,
+                        'submission.status:',
+                        submission.status,
+                    );
+                    throw e;
+                }
+            }
+
+            // Summary text
+            let summaryText = submission.fileName || 'Unknown file';
+            if (submission.status === 'completed' && submission.results) {
+                summaryText += ` - Score: ${submission.results.percentage || 0}%`;
+                const totalQuestions = Object.keys(submission.results.questions || {}).length;
+                summaryText += ` (${totalQuestions} questions)`;
+            } else if (submission.status === 'error') {
+                summaryText += ` - Error: ${submission.error || 'Unknown error'}`;
+            }
+            if (summary) {
+                try {
+                    summary.textContent = summaryText;
+                } catch (e) {
+                    console.error(
+                        'Error setting summary textContent:',
+                        e,
+                        'summary element:',
+                        summary,
+                        'summaryText:',
+                        summaryText,
+                    );
+                    throw e;
+                }
+            }
+
+            // Only show expand button for completed submissions with results
+            if (expandBtn) {
+                if (submission.status === 'completed' && submission.results) {
+                    expandBtn.style.display = 'flex';
+
+                    // Bind click event for expansion
+                    expandBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.toggleStudentDetails(submission, detailedResults, expandBtn);
+                    });
+                } else {
+                    expandBtn.style.display = 'none';
+                }
+            }
+
+            if (list) {
+                list.appendChild(clone);
+            }
         });
     }
 
@@ -371,6 +491,151 @@ class ProgressManager {
             error: '❌ Failed',
         };
         return statusMap[status] || status;
+    }
+
+    toggleStudentDetails(submission, detailedResults, expandBtn) {
+        const isExpanded = expandBtn.getAttribute('data-expanded') === 'true';
+        const expandText = expandBtn.querySelector('.expand-text');
+
+        if (isExpanded) {
+            // Collapse
+            detailedResults.style.display = 'none';
+            expandBtn.setAttribute('data-expanded', 'false');
+            expandText.textContent = 'Details';
+        } else {
+            // Expand
+            this.renderDetailedResults(submission, detailedResults);
+            detailedResults.style.display = 'block';
+            expandBtn.setAttribute('data-expanded', 'true');
+            expandText.textContent = 'Hide';
+        }
+    }
+
+    renderDetailedResults(submission, container) {
+        if (!submission.results || !submission.results.questions) {
+            container.innerHTML = '<p>No detailed results available</p>';
+            return;
+        }
+
+        const template = document.getElementById('detailed-results-template');
+        const clone = template.content.cloneNode(true);
+        const questionResults = clone.querySelector('#questionResults');
+
+        // Clear any existing content
+        this.clearElement(container);
+        this.clearElement(questionResults);
+
+        // Render each question
+        Object.entries(submission.results.questions).forEach(([questionName, questionData]) => {
+            const questionTemplate = document.getElementById('question-result-template');
+            const questionClone = questionTemplate.content.cloneNode(true);
+
+            const questionNameEl = questionClone.querySelector('.question-name');
+            const questionScoreEl = questionClone.querySelector('.question-score');
+            const passedTestsEl = questionClone.querySelector('.passed-tests');
+            const failedTestsEl = questionClone.querySelector('.failed-tests');
+            const questionErrorEl = questionClone.querySelector('.question-error');
+            const testCaseDetails = questionClone.querySelector('#testCaseDetails');
+
+            // Question header
+            questionNameEl.textContent = questionName;
+
+            // Score and status
+            let scoreClass = 'failed';
+            let scoreText = 'Failed';
+            if (questionData.status === 'passed') {
+                scoreClass = 'passed';
+                scoreText = `✅ ${questionData.score}/${questionData.maxScore}`;
+            } else if (questionData.status === 'partial') {
+                scoreClass = 'partial';
+                scoreText = `⚠️ ${questionData.score}/${questionData.maxScore}`;
+            } else if (questionData.status === 'error') {
+                scoreText = '❌ Error';
+            } else {
+                scoreText = `❌ ${questionData.score}/${questionData.maxScore}`;
+            }
+
+            questionScoreEl.textContent = scoreText;
+            questionScoreEl.className = `question-score ${scoreClass}`;
+
+            // Test summary
+            if (questionData.passed > 0) {
+                passedTestsEl.textContent = `✅ ${questionData.passed} passed`;
+            } else {
+                passedTestsEl.style.display = 'none';
+            }
+
+            if (questionData.failed > 0) {
+                failedTestsEl.textContent = `❌ ${questionData.failed} failed`;
+            } else {
+                failedTestsEl.style.display = 'none';
+            }
+
+            // Error message
+            if (questionData.error) {
+                questionErrorEl.textContent = questionData.error;
+                questionErrorEl.style.display = 'block';
+            }
+
+            // Test case details (only show failed test cases to keep it manageable)
+            if (questionData.testCases && questionData.testCases.length > 0) {
+                const failedTestCases = questionData.testCases.filter((tc) => !tc.passed);
+
+                failedTestCases.forEach((testCase) => {
+                    if (testCase.isPublic) {
+                        // Create test case header
+                        const headerTemplate = document.getElementById('test-case-template');
+                        const headerClone = headerTemplate.content.cloneNode(true);
+                        const headerDiv = headerClone.querySelector('.test-case');
+                        headerDiv.classList.add('test-failed');
+
+                        const headerText = document.createElement('strong');
+                        headerText.textContent = `Test ${testCase.index}: Wrong Answer`;
+                        headerDiv.appendChild(headerText);
+                        testCaseDetails.appendChild(headerClone);
+
+                        // Create test details
+                        const detailsTemplate = document.getElementById('test-case-details-template');
+                        const detailsClone = detailsTemplate.content.cloneNode(true);
+
+                        detailsClone.querySelector('.input-value').textContent = this.formatTestValue(testCase.input);
+                        detailsClone.querySelector('.expected-value').textContent = this.formatTestValue(
+                            testCase.expected,
+                        );
+
+                        const outputValue = testCase.error
+                            ? `Runtime Error: ${testCase.error}`
+                            : this.formatTestValue(testCase.actual);
+                        detailsClone.querySelector('.output-value').textContent = outputValue;
+
+                        testCaseDetails.appendChild(detailsClone);
+                    } else {
+                        // Show header for private test cases without details
+                        const headerTemplate = document.getElementById('test-case-template');
+                        const headerClone = headerTemplate.content.cloneNode(true);
+                        const headerDiv = headerClone.querySelector('.test-case');
+                        headerDiv.classList.add('test-failed');
+
+                        const headerText = document.createElement('strong');
+                        headerText.textContent = `Test ${testCase.index}: Wrong Answer`;
+                        headerDiv.appendChild(headerText);
+                        headerDiv.appendChild(document.createTextNode(' (Hidden test case)'));
+                        testCaseDetails.appendChild(headerClone);
+                    }
+                });
+            }
+
+            questionResults.appendChild(questionClone);
+        });
+
+        container.appendChild(clone);
+    }
+
+    formatTestValue(value) {
+        if (Array.isArray(value)) {
+            return `[${value.map((v) => JSON.stringify(v)).join(', ')}]`;
+        }
+        return JSON.stringify(value);
     }
 
     clearElement(element) {

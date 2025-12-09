@@ -80,11 +80,16 @@
 
         <template id="student-progress-item-template">
             <div class="student-progress-item">
-                <div class="student-info">
+                <div class="student-info" data-student-id="">
                     <span class="student-name"></span>
                     <span class="student-status"></span>
+                    <button class="expand-btn" data-expanded="false">
+                        <span class="expand-icon">▶</span>
+                        <span class="expand-text">Details</span>
+                    </button>
                 </div>
-                <div class="student-details"></div>
+                <div class="student-summary"></div>
+                <div class="student-detailed-results" style="display: none"></div>
             </div>
         </template>
 
@@ -114,6 +119,40 @@
 
         <template id="loading-status-template">
             <p class="loading-status"></p>
+        </template>
+
+        <template id="detailed-results-template">
+            <div class="detailed-results">
+                <h4 class="results-header">Question Results</h4>
+                <div class="question-results" id="questionResults"></div>
+            </div>
+        </template>
+
+        <template id="question-result-template">
+            <div class="question-result">
+                <div class="question-header">
+                    <span class="question-name"></span>
+                    <span class="question-score"></span>
+                </div>
+                <div class="test-cases-summary">
+                    <span class="passed-tests"></span>
+                    <span class="failed-tests"></span>
+                </div>
+                <div class="question-error" style="display: none"></div>
+                <div class="test-case-details" id="testCaseDetails"></div>
+            </div>
+        </template>
+
+        <template id="test-case-template">
+            <div class="test-case"></div>
+        </template>
+
+        <template id="test-case-details-template">
+            <div class="test-case test-case--details">
+                <div class="test-input"><strong>Input:</strong> <code class="input-value"></code></div>
+                <div class="test-expected"><strong>Expected:</strong> <code class="expected-value"></code></div>
+                <div class="test-output"><strong>Your output:</strong> <code class="output-value"></code></div>
+            </div>
         </template>
 
         <!-- Scripts -->
