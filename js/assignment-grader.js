@@ -133,7 +133,7 @@ class AssignmentGrader {
 
     runTestsOnAssignment(zip) {
         const testResults = this.document.getElementById('testResults');
-        testResults.innerHTML = '<p>🔍 Analyzing assignment structure...</p>';
+        this.setLoadingStatus(testResults, '🔍 Analyzing assignment structure...');
 
         const structureAnalysis = this.analyzeZipStructure(zip);
 
@@ -145,11 +145,11 @@ class AssignmentGrader {
         const assignmentStructure = this.extractAssignmentStructure(zip);
 
         if (assignmentStructure.length === 0) {
-            testResults.innerHTML = '<p class="message message--error">❌ No valid assignment structure found</p>';
+            this.setErrorStatus(testResults, '❌ No valid assignment structure found');
             return;
         }
 
-        testResults.innerHTML = '<p>🧪 Running tests...</p>';
+        this.setLoadingStatus(testResults, '🧪 Running tests...');
         this.runAllTests(zip, assignmentStructure);
     }
 
@@ -158,22 +158,23 @@ class AssignmentGrader {
         const clone = template.content.cloneNode(true);
 
         clone.querySelector('.error-message').textContent = analysis.error;
+        clone.querySelector('.error-suggestion').textContent = analysis.suggestion;
 
         const pathsList = clone.querySelector('.detected-paths');
-        const expectedList = clone.querySelector('.expected-paths');
 
         if (analysis.detectedPaths) {
-            pathsList.innerHTML = '';
+            this.clearElement(pathsList);
             analysis.detectedPaths.forEach((path) => {
-                const li = this.document.createElement('li');
-                li.innerHTML = `<code class="code-path code-path--error">${path}</code>`;
-                pathsList.appendChild(li);
+                const pathTemplate = this.document.getElementById('error-path-item-template');
+                const pathClone = pathTemplate.content.cloneNode(true);
+                pathClone.querySelector('.code-path').textContent = path;
+                pathsList.appendChild(pathClone);
             });
         } else {
             clone.querySelector('.structure-comparison').style.display = 'none';
         }
 
-        container.innerHTML = '';
+        this.clearElement(container);
         container.appendChild(clone);
     }
 
@@ -260,27 +261,32 @@ class AssignmentGrader {
         const clone = template.content.cloneNode(true);
 
         const questionsList = clone.querySelector('.questions-list');
-        questionsList.innerHTML = '';
+        this.clearElement(questionsList);
 
         assignmentStructure.forEach((item) => {
-            const li = this.document.createElement('li');
-            li.textContent = `${item.problemSet}/${item.question}`;
-            questionsList.appendChild(li);
+            const questionTemplate = this.document.getElementById('question-item-template');
+            const questionClone = questionTemplate.content.cloneNode(true);
+            questionClone.querySelector('.question-item').textContent = `${item.problemSet}/${item.question}`;
+            questionsList.appendChild(questionClone);
         });
 
         clone.querySelector('.total-questions').textContent = assignmentStructure.length;
 
-        testResults.innerHTML = '';
+        this.clearElement(testResults);
         testResults.appendChild(clone);
 
         for (const item of assignmentStructure) {
-            const resultDiv = this.document.createElement('div');
-            resultDiv.className = 'test-result';
-            resultDiv.innerHTML = `
-                <div class="test-header">${item.problemSet}/${item.question}</div>
-                <div id="tests-${item.question}">Running tests...</div>
-            `;
-            testResults.appendChild(resultDiv);
+            const resultTemplate = this.document.getElementById('test-result-container-template');
+            const resultClone = resultTemplate.content.cloneNode(true);
+            
+            const header = resultClone.querySelector('.test-header');
+            header.textContent = `${item.problemSet}/${item.question}`;
+            
+            const content = resultClone.querySelector('.test-content');
+            content.id = `tests-${item.question}`;
+            content.textContent = 'Running tests...';
+            
+            testResults.appendChild(resultClone);
         }
 
         for (const item of assignmentStructure) {
@@ -298,62 +304,121 @@ class AssignmentGrader {
             const results = this.testExecutor.executeTests(codeContent, testContent);
             this.displayTestResults(container, results);
         } catch (error) {
-            container.innerHTML = `<div class="test-case test-error">Error: ${error.message}</div>`;
+            this.setErrorCase(container, `Error: ${error.message}`);
         }
     }
 
     displayTestResults(container, results) {
         if (results.error) {
-            container.innerHTML = `<div class="test-case test-error">❌ ${results.error}</div>`;
+            this.setErrorCase(container, `❌ ${results.error}`);
             return;
         }
 
-        let html = '';
+        this.clearElement(container);
 
         const totalTests = results.passed + results.failed;
+        
+        // Create main result status
+        const statusTemplate = this.document.getElementById('test-case-template');
+        const statusClone = statusTemplate.content.cloneNode(true);
+        const statusDiv = statusClone.querySelector('.test-case');
+        
         if (results.failed === 0) {
-            html += `<div class="test-case test-passed">
-                <strong>✅ Accepted</strong> (${totalTests}/${totalTests} test cases passed)
-            </div>`;
+            statusDiv.classList.add('test-passed');
+            const statusText = this.document.createElement('strong');
+            statusText.textContent = '✅ Accepted';
+            statusDiv.appendChild(statusText);
+            statusDiv.appendChild(this.document.createTextNode(` (${totalTests}/${totalTests} test cases passed)`));
         } else {
-            html += `<div class="test-case test-failed">
-                <strong>❌ Wrong Answer</strong> (${results.passed}/${totalTests} test cases passed)
-            </div>`;
+            statusDiv.classList.add('test-failed');
+            const statusText = this.document.createElement('strong');
+            statusText.textContent = '❌ Wrong Answer';
+            statusDiv.appendChild(statusText);
+            statusDiv.appendChild(this.document.createTextNode(` (${results.passed}/${totalTests} test cases passed)`));
         }
+        
+        container.appendChild(statusClone);
 
+        // Display failed test details
         const failedTests = results.testCases.filter((tc) => !tc.passed);
         if (failedTests.length > 0) {
-            html += `<div class="mt-15">`;
+            const detailsContainer = this.document.createElement('div');
+            detailsContainer.className = 'mt-15';
 
             failedTests.forEach((testCase) => {
+                // Create test case header
+                const headerTemplate = this.document.getElementById('test-case-template');
+                const headerClone = headerTemplate.content.cloneNode(true);
+                const headerDiv = headerClone.querySelector('.test-case');
+                headerDiv.classList.add('test-failed');
+                
                 if (testCase.isPublic) {
-                    html += `<div class="test-case test-failed">
-                        <strong>Test ${testCase.index}: Wrong Answer</strong>
-                    </div>`;
+                    const headerText = this.document.createElement('strong');
+                    headerText.textContent = `Test ${testCase.index}: Wrong Answer`;
+                    headerDiv.appendChild(headerText);
+                    detailsContainer.appendChild(headerClone);
 
-                    html += `<div class="test-case test-case--details">
-                        <div><strong>Input:</strong> <code>${this.fileUtils.formatTestValue(
-                            testCase.input,
-                        )}</code></div>
-                        <div><strong>Expected:</strong> <code>${this.fileUtils.formatTestValue(
-                            testCase.expected,
-                        )}</code></div>
-                        <div><strong>Your output:</strong> <code>${
-                            testCase.error
-                                ? `Runtime Error: ${testCase.error}`
-                                : this.fileUtils.formatTestValue(testCase.actual)
-                        }</code></div>
-                    </div>`;
+                    // Create test details
+                    const detailsTemplate = this.document.getElementById('test-case-details-template');
+                    const detailsClone = detailsTemplate.content.cloneNode(true);
+                    
+                    detailsClone.querySelector('.input-value').textContent = this.fileUtils.formatTestValue(testCase.input);
+                    detailsClone.querySelector('.expected-value').textContent = this.fileUtils.formatTestValue(testCase.expected);
+                    
+                    const outputValue = testCase.error 
+                        ? `Runtime Error: ${testCase.error}`
+                        : this.fileUtils.formatTestValue(testCase.actual);
+                    detailsClone.querySelector('.output-value').textContent = outputValue;
+                    
+                    detailsContainer.appendChild(detailsClone);
                 } else {
-                    html += `<div class="test-case test-failed">
-                        <strong>Test ${testCase.index}: Wrong Answer</strong> (Hidden test case)
-                    </div>`;
+                    const headerText = this.document.createElement('strong');
+                    headerText.textContent = `Test ${testCase.index}: Wrong Answer`;
+                    headerDiv.appendChild(headerText);
+                    headerDiv.appendChild(this.document.createTextNode(' (Hidden test case)'));
+                    detailsContainer.appendChild(headerClone);
                 }
             });
 
-            html += `</div>`;
+            container.appendChild(detailsContainer);
         }
+    }
 
-        container.innerHTML = html;
+    // Utility methods for template operations
+    clearElement(element) {
+        while (element.firstChild) {
+            element.removeChild(element.firstChild);
+        }
+    }
+
+    setLoadingStatus(container, message) {
+        const template = this.document.getElementById('loading-status-template');
+        const clone = template.content.cloneNode(true);
+        clone.querySelector('.loading-status').textContent = message;
+        
+        this.clearElement(container);
+        container.appendChild(clone);
+    }
+
+    setErrorStatus(container, message) {
+        const template = this.document.getElementById('message-template');
+        const clone = template.content.cloneNode(true);
+        const messageDiv = clone.querySelector('.message');
+        messageDiv.classList.add('message--error');
+        messageDiv.textContent = message;
+        
+        this.clearElement(container);
+        container.appendChild(clone);
+    }
+
+    setErrorCase(container, message) {
+        const template = this.document.getElementById('test-case-template');
+        const clone = template.content.cloneNode(true);
+        const caseDiv = clone.querySelector('.test-case');
+        caseDiv.classList.add('test-error');
+        caseDiv.textContent = message;
+        
+        this.clearElement(container);
+        container.appendChild(clone);
     }
 }

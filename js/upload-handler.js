@@ -144,14 +144,14 @@ class UploadHandler {
         clone.querySelector('.zip-last-modified').textContent = new Date(originalFile.lastModified).toLocaleString();
 
         const zipInfo = this.document.getElementById('zipInfo');
-        zipInfo.innerHTML = '';
+        this.clearElement(zipInfo);
         zipInfo.appendChild(clone);
     }
 
     displayFileTree(zip) {
         this.zipFiles = [];
         const fileTree = this.document.getElementById('fileTree');
-        fileTree.innerHTML = '';
+        this.clearElement(fileTree);
 
         const sortedFiles = Object.values(zip.files).sort((a, b) => {
             if (a.dir !== b.dir) {
@@ -196,7 +196,7 @@ class UploadHandler {
             viewBtn.onclick = () => this.viewFile(zipEntry.name);
             downloadBtn.onclick = () => this.downloadFile(zipEntry.name);
         } else {
-            actionsContainer.innerHTML = '';
+            this.clearElement(actionsContainer);
         }
 
         return clone;
@@ -224,6 +224,12 @@ class UploadHandler {
         }
 
         this.fileViewer.downloadFile(file, filename);
+    }
+
+    clearElement(element) {
+        while (element.firstChild) {
+            element.removeChild(element.firstChild);
+        }
     }
 }
 

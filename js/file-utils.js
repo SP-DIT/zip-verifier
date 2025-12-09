@@ -113,11 +113,13 @@ class FileViewer {
         } else {
             const ext = filename.toLowerCase().split('.').pop();
             contentHeader.textContent = `📁 ${filename} (Binary File)`;
-            contentBody.innerHTML = `
-                <p>This appears to be a binary file and cannot be displayed as text.</p>
-                <p><strong>File Type:</strong> ${ext.toUpperCase()}</p>
-                <p>Use the Download button to save this file to your computer.</p>
-            `;
+            
+            const template = this.document.getElementById('binary-file-content-template');
+            const clone = template.content.cloneNode(true);
+            clone.querySelector('.file-type').textContent = ext.toUpperCase();
+            
+            this.clearElement(contentBody);
+            contentBody.appendChild(clone);
         }
     }
 
@@ -137,5 +139,11 @@ class FileViewer {
             .catch((error) => {
                 this.ui.showError(`Failed to download file: ${error.message}`);
             });
+    }
+
+    clearElement(element) {
+        while (element.firstChild) {
+            element.removeChild(element.firstChild);
+        }
     }
 }

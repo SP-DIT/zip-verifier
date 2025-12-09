@@ -110,6 +110,45 @@
             </div>
         </template>
 
+        <template id="loading-status-template">
+            <p class="loading-status"></p>
+        </template>
+
+        <template id="error-path-item-template">
+            <li><code class="code-path code-path--error"></code></li>
+        </template>
+
+        <template id="question-item-template">
+            <li class="question-item"></li>
+        </template>
+
+        <template id="test-result-container-template">
+            <div class="test-result">
+                <div class="test-header"></div>
+                <div class="test-content"></div>
+            </div>
+        </template>
+
+        <template id="test-case-template">
+            <div class="test-case"></div>
+        </template>
+
+        <template id="test-case-details-template">
+            <div class="test-case test-case--details">
+                <div class="test-input"><strong>Input:</strong> <code class="input-value"></code></div>
+                <div class="test-expected"><strong>Expected:</strong> <code class="expected-value"></code></div>
+                <div class="test-output"><strong>Your output:</strong> <code class="output-value"></code></div>
+            </div>
+        </template>
+
+        <template id="binary-file-content-template">
+            <div class="binary-file-info">
+                <p>This appears to be a binary file and cannot be displayed as text.</p>
+                <p><strong>File Type:</strong> <span class="file-type"></span></p>
+                <p>Use the Download button to save this file to your computer.</p>
+            </div>
+        </template>
+
         <!-- Scripts -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
         <script src="js/ui-utils.js"></script>

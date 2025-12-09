@@ -11,13 +11,13 @@ class UIManager {
 
         const messageDiv = clone.querySelector('.message');
         messageDiv.classList.add('message--error');
-        messageDiv.innerHTML = `❌ ${message}`;
+        messageDiv.textContent = `❌ ${message}`;
 
-        errorDiv.innerHTML = '';
+        this.clearElement(errorDiv);
         errorDiv.appendChild(clone);
 
         setTimeout(() => {
-            errorDiv.innerHTML = '';
+            this.clearElement(errorDiv);
         }, 5000);
     }
 
@@ -28,13 +28,13 @@ class UIManager {
 
         const messageDiv = clone.querySelector('.message');
         messageDiv.classList.add('message--success');
-        messageDiv.innerHTML = `✅ ${message}`;
+        messageDiv.textContent = `✅ ${message}`;
 
-        successDiv.innerHTML = '';
+        this.clearElement(successDiv);
         successDiv.appendChild(clone);
 
         setTimeout(() => {
-            successDiv.innerHTML = '';
+            this.clearElement(successDiv);
         }, 3000);
     }
 
@@ -81,5 +81,11 @@ class UIManager {
     showTestRunner() {
         const testRunner = this.document.getElementById('testRunnerContainer');
         testRunner.classList.add('test-runner--visible');
+    }
+
+    clearElement(element) {
+        while (element.firstChild) {
+            element.removeChild(element.firstChild);
+        }
     }
 }
