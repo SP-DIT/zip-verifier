@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Batch ZIP Processor - Instructor Tool</title>
+        <link rel="stylesheet" href="styles.css" />
+        <link rel="stylesheet" href="batch-styles.css" />
+    </head>
+    <body>
+        <nav class="navigation">
+            <a href="index.html">Student Verifier</a>
+            <a href="batch.html" class="active">Batch Processor</a>
+        </nav>
+
+        <h1>📚 Batch ZIP Processor - Instructor Tool</h1>
+
+        <!-- Upload Section -->
+        <div class="container">
+            <div class="upload-section">
+                <h2>📁 Upload Bulk Submissions</h2>
+                <p>Upload a ZIP file containing multiple student submissions (ZIP of ZIPs)</p>
+
+                <form id="bulkSubmitFile">
+                    <div class="file-input-wrapper">
+                        <input type="file" id="bulkFileInput" name="bulkFileInput" accept=".zip" class="file-input" />
+                        <button type="submit" class="upload-btn" id="bulkUploadBtn">Process Bulk Submissions</button>
+                    </div>
+                </form>
+
+                <div class="loading" id="bulkLoading">📖 Processing bulk submissions...</div>
+
+                <div id="bulkErrorMessage"></div>
+                <div id="bulkSuccessMessage"></div>
+            </div>
+        </div>
+
+        <!-- Progress Section -->
+        <div class="container batch-progress" id="batchProgressContainer">
+            <h2>🔄 Processing Progress</h2>
+            <div id="batchProgress"></div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="container batch-results" id="batchResultsContainer">
+            <h2>📊 Batch Results</h2>
+            <div class="results-summary" id="resultsSummary"></div>
+            <div class="results-actions">
+                <button id="exportCSV" class="btn btn-primary" disabled>Export CSV</button>
+                <button id="exportJSON" class="btn btn-secondary" disabled>Export JSON</button>
+            </div>
+            <div id="detailedResults"></div>
+        </div>
+
+        <!-- Templates -->
+        <template id="message-template">
+            <div class="message"></div>
+        </template>
+
+        <template id="progress-dashboard-template">
+            <div class="progress-dashboard">
+                <div class="overall-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text">
+                        <span id="progressText">0 / 0</span>
+                        <span class="progress-percentage" id="progressPercentage">0%</span>
+                    </div>
+                </div>
+                <div class="status-counts">
+                    <span class="status-item completed">✅ <span id="completedCount">0</span></span>
+                    <span class="status-item failed">❌ <span id="failedCount">0</span></span>
+                    <span class="status-item processing">⏳ <span id="processingCount">0</span></span>
+                    <span class="status-item remaining">📋 <span id="remainingCount">0</span></span>
+                </div>
+                <div class="student-progress-list" id="studentProgressList"></div>
+            </div>
+        </template>
+
+        <template id="student-progress-item-template">
+            <div class="student-progress-item">
+                <div class="student-info">
+                    <span class="student-name"></span>
+                    <span class="student-status"></span>
+                </div>
+                <div class="student-details"></div>
+            </div>
+        </template>
+
+        <template id="results-summary-template">
+            <div class="summary-stats">
+                <h3>📈 Summary Statistics</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-label">Total Submissions</span>
+                        <span class="stat-value" id="totalSubmissions">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Successful</span>
+                        <span class="stat-value success" id="successfulSubmissions">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Failed</span>
+                        <span class="stat-value failed" id="failedSubmissions">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Average Score</span>
+                        <span class="stat-value" id="averageScore">0%</span>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <template id="loading-status-template">
+            <p class="loading-status"></p>
+        </template>
+
+        <!-- Scripts -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+        <script src="js/ui-utils.js"></script>
+        <script src="js/file-utils.js"></script>
+        <script src="js/console-manager.js"></script>
+        <script src="js/test-executor.js"></script>
+        <script src="js/assignment-grader.js"></script>
+        <script src="js/batch-processor.js"></script>
+        <script src="js/batch-upload-handler.js"></script>
+    </body>
+</html>

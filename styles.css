@@ -1,5 +1,33 @@
 /* ZIP File Reader & Verifier - Styles */
 
+/* Navigation Styles */
+.navigation {
+    background: #f8f9fa;
+    padding: 10px 20px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.navigation a {
+    display: inline-block;
+    padding: 8px 16px;
+    margin-right: 10px;
+    text-decoration: none;
+    color: #495057;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.navigation a:hover {
+    background: #e9ecef;
+    color: #007bff;
+}
+
+.navigation a.active {
+    background: #007bff;
+    color: white;
+}
+
 /* Base Styles */
 body {
     font-family: Arial, sans-serif;
