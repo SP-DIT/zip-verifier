@@ -71,6 +71,31 @@ class UIManager {
     showZipContent() {
         const zipContent = this.document.getElementById('zipContent');
         zipContent.classList.add('zip-content--visible');
+        this.setupZipToggle();
+    }
+
+    setupZipToggle() {
+        const toggleBtn = this.document.getElementById('toggleZipInfo');
+        const zipDetails = this.document.getElementById('zipDetails');
+        const toggleIcon = this.document.getElementById('toggleIcon');
+        const toggleText = this.document.getElementById('toggleText');
+
+        if (toggleBtn && !toggleBtn.hasEventListener) {
+            toggleBtn.hasEventListener = true;
+            toggleBtn.addEventListener('click', () => {
+                const isVisible = zipDetails.style.display !== 'none';
+                
+                if (isVisible) {
+                    zipDetails.style.display = 'none';
+                    toggleIcon.textContent = '👁️';
+                    toggleText.textContent = 'Show ZIP Details';
+                } else {
+                    zipDetails.style.display = 'block';
+                    toggleIcon.textContent = '🙈';
+                    toggleText.textContent = 'Hide ZIP Details';
+                }
+            });
+        }
     }
 
     hideTestRunner() {

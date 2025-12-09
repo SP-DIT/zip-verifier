@@ -29,25 +29,34 @@
             </div>
         </div>
 
-        <!-- ZIP Content Display -->
-        <div class="container zip-content" id="zipContent">
-            <div id="zipInfo"></div>
-
-            <h3>📂 File Structure</h3>
-            <div class="file-tree" id="fileTree"></div>
-
-            <div class="file-content" id="fileContent">
-                <div class="content-header" id="contentHeader"></div>
-                <div class="content-body" id="contentBody"></div>
-            </div>
-        </div>
-
         <!-- Test Runner Section -->
         <div class="container test-runner" id="testRunnerContainer">
             <h2>🧪 Code Test Runner</h2>
             <p>Upload your assignment ZIP file to verify your code against test cases</p>
 
             <div id="testResults"></div>
+        </div>
+
+        <!-- ZIP Content Display -->
+        <div class="container zip-content" id="zipContent">
+            <div class="zip-header">
+                <button class="toggle-btn" id="toggleZipInfo">
+                    <span id="toggleIcon">👁️</span>
+                    <span id="toggleText">Show ZIP Details</span>
+                </button>
+            </div>
+            
+            <div class="zip-details" id="zipDetails" style="display: none;">
+                <div id="zipInfo"></div>
+
+                <h3>📂 File Structure</h3>
+                <div class="file-tree" id="fileTree"></div>
+
+                <div class="file-content" id="fileContent">
+                    <div class="content-header" id="contentHeader"></div>
+                    <div class="content-body" id="contentBody"></div>
+                </div>
+            </div>
         </div>
 
         <!-- Templates -->

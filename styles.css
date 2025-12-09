@@ -343,6 +343,49 @@ h1 {
     margin-top: 15px;
 }
 
+/* ZIP Details Toggle Styles */
+.zip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.toggle-btn:hover {
+    background: #e9ecef;
+    border-color: #bbb;
+}
+
+.toggle-btn:active {
+    transform: translateY(1px);
+}
+
+#toggleIcon {
+    font-size: 16px;
+    transition: transform 0.3s ease;
+}
+
+.zip-details {
+    transition: all 0.3s ease;
+}
+
+.zip-details.show {
+    display: block !important;
+}
+
 .ml-20 {
     margin-left: 20px;
 }
