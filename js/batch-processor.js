@@ -1,12 +1,18 @@
 // Batch Processor Module
 class BatchProcessor {
-    constructor(batchSize = 4) {
+    constructor(
+        batchSize = AppConfig.BATCH_SETTINGS.DEFAULT_BATCH_SIZE,
+        testRunnerService = null,
+        assignmentGrader = null,
+    ) {
         this.batchSize = batchSize;
         this.queue = [];
         this.results = new Map();
         this.progressCallback = null;
         this.completedCount = 0;
         this.failedCount = 0;
+        this.testRunnerService = testRunnerService;
+        this.assignmentGrader = assignmentGrader;
     }
 
     async extractStudentSubmissions(bulkZip) {
@@ -93,7 +99,7 @@ class BatchProcessor {
 
             // Small delay between batches to prevent browser freeze
             if (batchIndex < batches.length - 1) {
-                await this.delay(100);
+                await this.delay(AppConfig.TIMEOUTS.BATCH_DELAY);
             }
         }
 
@@ -129,78 +135,25 @@ class BatchProcessor {
             // Load and process the student's ZIP
             const studentZip = await JSZip.loadAsync(submission.zipData);
 
-            // Use existing assignment grader to process
-            const consoleManager = new ConsoleManager(console);
-            const testExecutor = new TestExecutor(consoleManager);
-            const fileUtils = new FileUtils();
-            const grader = new AssignmentGrader(testExecutor, fileUtils, document);
+            // Use injected services or create new instances as fallback
+            const testRunnerService =
+                this.testRunnerService ||
+                new TestRunnerService(new TestExecutor(new ConsoleManager(console)), new FileUtils());
+            const assignmentGrader =
+                this.assignmentGrader ||
+                new AssignmentGrader(new TestExecutor(new ConsoleManager(console)), new FileUtils(), document);
 
-            // Analyze and process the assignment
-            const structureAnalysis = grader.analyzeZipStructure(studentZip);
+            // Use the test runner service to process tests
+            const testResult = await testRunnerService.processSubmissionTests(submission, studentZip, assignmentGrader);
 
-            if (!structureAnalysis.valid) {
+            if (testResult.status === 'error') {
                 submission.status = 'error';
-                submission.error = structureAnalysis.error;
+                submission.error = testResult.error;
                 this.failedCount++;
             } else {
-                const assignmentStructure = grader.extractAssignmentStructure(studentZip);
-
-                if (assignmentStructure.length === 0) {
-                    submission.status = 'error';
-                    submission.error = 'No valid assignment structure found';
-                    this.failedCount++;
-                } else {
-                    // Process each question
-                    const questionResults = {};
-                    let totalScore = 0;
-                    let maxScore = 0;
-
-                    for (const item of assignmentStructure) {
-                        try {
-                            const codeContent = await studentZip.file(item.codeFile).async('string');
-                            const testContent = await studentZip.file(item.testFile).async('string');
-
-                            const results = testExecutor.executeTests(codeContent, testContent);
-
-                            const questionScore = results.error ? 0 : results.passed;
-                            const questionMaxScore = results.error ? 0 : results.passed + results.failed;
-
-                            questionResults[item.question] = {
-                                status: results.error ? 'error' : results.failed === 0 ? 'passed' : 'partial',
-                                score: questionScore,
-                                maxScore: questionMaxScore,
-                                passed: results.passed || 0,
-                                failed: results.failed || 0,
-                                error: results.error || null,
-                                testCases: results.testCases || [],
-                            };
-
-                            totalScore += questionScore;
-                            maxScore += questionMaxScore;
-                        } catch (error) {
-                            questionResults[item.question] = {
-                                status: 'error',
-                                score: 0,
-                                maxScore: 0,
-                                passed: 0,
-                                failed: 0,
-                                error: error.message,
-                                testCases: [],
-                            };
-                        }
-                    }
-
-                    submission.status = 'completed';
-                    submission.results = {
-                        questions: questionResults,
-                        totalScore: totalScore,
-                        maxScore: maxScore,
-                        percentage: maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0,
-                        assignmentStructure: assignmentStructure,
-                    };
-
-                    this.completedCount++;
-                }
+                submission.status = 'completed';
+                submission.results = testResult.results;
+                this.completedCount++;
             }
 
             // Store result

@@ -1,6 +1,18 @@
 // Upload Handler Module
-class UploadHandler {
-    constructor(uiManager, fileUtils, fileViewer, assignmentGrader, document, console, FileReader, JSZip) {
+class UploadHandler extends BaseUploadHandler {
+    constructor(
+        uiManager,
+        fileUtils,
+        fileViewer,
+        assignmentGrader,
+        document,
+        console,
+        FileReader,
+        JSZip,
+        domUtils = null,
+        notificationService = null,
+    ) {
+        super(domUtils || new DOMUtils(document), notificationService);
         this.uiManager = uiManager;
         this.fileUtils = fileUtils;
         this.fileViewer = fileViewer;
@@ -16,65 +28,14 @@ class UploadHandler {
 
     init() {
         this.bindEvents();
-        this.setupDragAndDrop();
+        this.setupDragAndDrop('.upload-section', 'fileInput', (file) => this.readZipFile(file));
     }
 
     bindEvents() {
         const submitForm = this.document.getElementById('submitFile');
-        submitForm.addEventListener('submit', (event) => this.handleSubmit(event));
-    }
-
-    setupDragAndDrop() {
-        const uploadSection = this.document.querySelector('.upload-section');
-
-        uploadSection.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadSection.classList.add('upload-section--dragover');
-        });
-
-        uploadSection.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            uploadSection.classList.remove('upload-section--dragover');
-        });
-
-        uploadSection.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadSection.classList.remove('upload-section--dragover');
-
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                const file = files[0];
-                if (this.isValidZipFile(file)) {
-                    this.document.getElementById('fileInput').files = files;
-                    this.readZipFile(file);
-                } else {
-                    this.uiManager.showError('Please drop a valid ZIP file.');
-                }
-            }
-        });
-    }
-
-    handleSubmit(event) {
-        event.preventDefault();
-
-        const fileInput = this.document.getElementById('fileInput');
-        if (fileInput.files.length === 0) {
-            this.uiManager.showError('Please select a ZIP file to upload.');
-            return;
-        }
-
-        const file = fileInput.files[0];
-
-        if (!this.isValidZipFile(file)) {
-            this.uiManager.showError('Please select a valid ZIP file.');
-            return;
-        }
-
-        this.readZipFile(file);
-    }
-
-    isValidZipFile(file) {
-        return file.name.toLowerCase().endsWith('.zip') || file.type === 'application/zip';
+        submitForm.addEventListener('submit', (event) =>
+            super.handleSubmit(event, 'fileInput', (file) => this.readZipFile(file)),
+        );
     }
 
     readZipFile(file) {
@@ -83,31 +44,20 @@ class UploadHandler {
         this.uiManager.hideZipContent();
         this.uiManager.hideTestRunner();
 
-        const reader = new this.FileReader();
-
-        reader.onload = (e) => {
-            const arrayBuffer = e.target.result;
-
-            this.JSZip.loadAsync(arrayBuffer)
-                .then((zip) => {
-                    this.currentZip = zip;
-                    this.displayZipContents(zip, file);
-                    this.uiManager.showLoading(false);
-                    this.uiManager.showSuccess(`Successfully loaded ZIP file: ${file.name}`);
-                })
-                .catch((error) => {
-                    this.uiManager.showLoading(false);
-                    this.uiManager.showError(`Failed to read ZIP file: ${error.message}`);
-                    this.console.error('ZIP reading error:', error);
-                });
-        };
-
-        reader.onerror = () => {
-            this.uiManager.showLoading(false);
-            this.uiManager.showError('Failed to read the selected file.');
-        };
-
-        reader.readAsArrayBuffer(file);
+        this.readZipFileAsync(
+            file,
+            (zip, file) => {
+                this.currentZip = zip;
+                this.displayZipContents(zip, file);
+                this.uiManager.showLoading(false);
+                this.uiManager.showSuccess(`Successfully loaded ZIP file: ${file.name}`);
+            },
+            (error) => {
+                this.uiManager.showLoading(false);
+                this.uiManager.showError(`Failed to read ZIP file: ${error.message}`);
+                this.console.error('ZIP reading error:', error);
+            },
+        );
     }
 
     displayZipContents(zip, originalFile) {
@@ -225,33 +175,52 @@ class UploadHandler {
 
         this.fileViewer.downloadFile(file, filename);
     }
-
-    clearElement(element) {
-        while (element.firstChild) {
-            element.removeChild(element.firstChild);
-        }
-    }
 }
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    // Create all dependencies
-    const uiManager = new UIManager(document);
-    const fileUtils = new FileUtils();
-    const consoleManager = new ConsoleManager(console);
-    const fileViewer = new FileViewer(uiManager, fileUtils, document);
-    const testExecutor = new TestExecutor(consoleManager);
-    const assignmentGrader = new AssignmentGrader(testExecutor, fileUtils, document);
+    // Use dependency container for service creation
+    try {
+        const uiManager = container.get('uiManager');
+        const fileUtils = container.get('fileUtils');
+        const fileViewer = container.get('fileViewer');
+        const assignmentGrader = container.get('assignmentGrader');
+        const domUtils = container.get('domUtils');
+        const notificationService = container.get('notificationService');
 
-    // Initialize upload handler with all dependencies
-    window.uploadHandler = new UploadHandler(
-        uiManager,
-        fileUtils,
-        fileViewer,
-        assignmentGrader,
-        document,
-        console,
-        FileReader,
-        JSZip,
-    );
+        // Initialize upload handler with all dependencies
+        window.uploadHandler = new UploadHandler(
+            uiManager,
+            fileUtils,
+            fileViewer,
+            assignmentGrader,
+            document,
+            console,
+            FileReader,
+            JSZip,
+            domUtils,
+            notificationService,
+        );
+    } catch (error) {
+        console.error('Failed to initialize upload handler:', error);
+
+        // Fallback to manual initialization
+        const uiManager = new UIManager(document);
+        const fileUtils = new FileUtils();
+        const consoleManager = new ConsoleManager(console);
+        const fileViewer = new FileViewer(uiManager, fileUtils, document);
+        const testExecutor = new TestExecutor(consoleManager);
+        const assignmentGrader = new AssignmentGrader(testExecutor, fileUtils, document);
+
+        window.uploadHandler = new UploadHandler(
+            uiManager,
+            fileUtils,
+            fileViewer,
+            assignmentGrader,
+            document,
+            console,
+            FileReader,
+            JSZip,
+        );
+    }
 });

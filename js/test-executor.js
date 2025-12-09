@@ -115,7 +115,7 @@ class TestExecutor {
 
             const executionCode = `
                 var __executionStartTime = Date.now();
-                var __timeoutMs = 2000; // 2 seconds timeout
+                var __timeoutMs = ${AppConfig.TIMEOUTS.CODE_EXECUTION}; // Configurable timeout
                 var __checkTimeoutCounter = 0;
 
                 function __checkTimeout() {
