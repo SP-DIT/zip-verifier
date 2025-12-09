@@ -364,9 +364,42 @@ class ProgressManager {
             progressPercentage.textContent = `${progress.percentage}%`;
         }
 
-        // Update status counts
+        // Calculate detailed statistics for completed submissions
+        const completedSubmissions = progress.submissions.filter((s) => s.status === 'completed' && s.results);
+        let totalPassed = 0;
+        let totalWarnings = 0;
+        let totalErrors = 0;
+
+        completedSubmissions.forEach((submission) => {
+            const questions = submission.results.questions || {};
+            Object.values(questions).forEach((question) => {
+                if (question.status === 'passed') {
+                    totalPassed++;
+                } else if (question.status === 'partial') {
+                    totalWarnings++;
+                } else if (question.status === 'error') {
+                    totalErrors++;
+                }
+            });
+        });
+
+        // Update status counts with detailed breakdown
+        const completedElement = document.getElementById('completedCount');
+        if (completedElement && completedSubmissions.length > 0) {
+            const statusParts = [];
+            if (totalPassed > 0) statusParts.push(`✅ ${totalPassed}`);
+            if (totalWarnings > 0) statusParts.push(`⚠️ ${totalWarnings}`);
+            if (totalErrors > 0) statusParts.push(`❌ ${totalErrors}`);
+            completedElement.textContent = statusParts.length > 0 ? statusParts.join(' ') : progress.completed;
+        } else {
+            const element = document.getElementById('completedCount');
+            if (element) {
+                element.textContent = progress.completed;
+            }
+        }
+
+        // Update other status counts
         const counters = {
-            completedCount: progress.completed,
             failedCount: progress.failed,
             processingCount: progress.processing,
             remainingCount: progress.remaining,
@@ -447,7 +480,7 @@ class ProgressManager {
             }
             if (status) {
                 try {
-                    status.textContent = this.formatStatus(submission.status);
+                    status.textContent = this.formatStatus(submission.status, submission);
                     status.className = `student-status ${submission.status}`;
                 } catch (e) {
                     console.error(
@@ -508,13 +541,39 @@ class ProgressManager {
         });
     }
 
-    formatStatus(status) {
+    formatStatus(status, submission = null) {
         const statusMap = {
             pending: '📋 Pending',
             processing: '⏳ Processing',
-            completed: '✅ Completed',
             error: '❌ Failed',
         };
+
+        if (status === 'completed' && submission && submission.results) {
+            // Calculate detailed status for completed submissions
+            const questions = submission.results.questions || {};
+            let passed = 0;
+            let warnings = 0;
+            let errors = 0;
+
+            Object.values(questions).forEach((question) => {
+                if (question.status === 'passed') {
+                    passed++;
+                } else if (question.status === 'partial') {
+                    warnings++;
+                } else if (question.status === 'error') {
+                    errors++;
+                }
+            });
+
+            // Build status string with counts
+            const statusParts = [];
+            if (passed > 0) statusParts.push(`✅ ${passed}`);
+            if (warnings > 0) statusParts.push(`⚠️ ${warnings}`);
+            if (errors > 0) statusParts.push(`❌ ${errors}`);
+
+            return statusParts.length > 0 ? statusParts.join(' ') : '✅ Completed';
+        }
+
         return statusMap[status] || status;
     }
 
