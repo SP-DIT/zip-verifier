@@ -112,6 +112,9 @@ class BatchUploadHandler {
 
     async processBulkSubmissions(bulkZip) {
         try {
+            // Clear previous results
+            this.clearPreviousResults();
+
             // Extract individual student submissions
             this.showLoading(true, 'Extracting student submissions...');
 
@@ -254,6 +257,33 @@ class BatchUploadHandler {
     hideResults() {
         const container = this.document.getElementById('batchResultsContainer');
         container.classList.remove('batch-results--visible');
+    }
+
+    clearPreviousResults() {
+        // Hide previous progress and results
+        this.hideProgress();
+        this.hideResults();
+
+        // Clear progress container content
+        const progressContainer = this.document.getElementById('batchProgress');
+        if (progressContainer) {
+            this.clearElement(progressContainer);
+        }
+
+        // Clear results container content
+        const resultsContainer = this.document.getElementById('resultsSummary');
+        if (resultsContainer) {
+            this.clearElement(resultsContainer);
+        }
+        const detailedResultsContainer = this.document.getElementById('detailedResults');
+        if (detailedResultsContainer) {
+            this.clearElement(detailedResultsContainer);
+        }
+
+        // Reset batch processor state
+        if (this.batchProcessor) {
+            this.batchProcessor.reset();
+        }
     }
 
     clearElement(element) {

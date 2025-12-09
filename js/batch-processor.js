@@ -1,23 +1,12 @@
 // Batch Processor Module
 class BatchProcessor {
-    constructor(batchSize = 4, maxConcurrentWorkers = 2) {
+    constructor(batchSize = 4) {
         this.batchSize = batchSize;
-        this.maxConcurrentWorkers = maxConcurrentWorkers;
         this.queue = [];
         this.results = new Map();
-        this.activeWorkers = 0;
         this.progressCallback = null;
         this.completedCount = 0;
         this.failedCount = 0;
-        this.workerPool = [];
-        this.initializeWorkerPool();
-    }
-
-    initializeWorkerPool() {
-        // Pre-create worker pool for better performance
-        for (let i = 0; i < this.maxConcurrentWorkers; i++) {
-            this.workerPool.push(null);
-        }
     }
 
     async extractStudentSubmissions(bulkZip) {
@@ -275,5 +264,14 @@ class BatchProcessor {
             totalScore,
             totalMaxScore,
         };
+    }
+
+    reset() {
+        // Clear all state for new batch processing
+        this.queue = [];
+        this.results.clear();
+        this.progressCallback = null;
+        this.completedCount = 0;
+        this.failedCount = 0;
     }
 }
