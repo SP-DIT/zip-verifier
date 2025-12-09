@@ -2,9 +2,8 @@
 class UploadHandler extends BaseUploadHandler {
     constructor(
         uiManager,
-        fileUtils,
         fileViewer,
-        assignmentGrader,
+        testRunnerService,
         document,
         console,
         FileReader,
@@ -14,9 +13,8 @@ class UploadHandler extends BaseUploadHandler {
     ) {
         super(domUtils || new DOMUtils(document), notificationService);
         this.uiManager = uiManager;
-        this.fileUtils = fileUtils;
         this.fileViewer = fileViewer;
-        this.assignmentGrader = assignmentGrader;
+        this.testRunnerService = testRunnerService;
         this.document = document;
         this.console = console;
         this.FileReader = FileReader;
@@ -62,15 +60,14 @@ class UploadHandler extends BaseUploadHandler {
 
     displayZipContents(zip, originalFile) {
         // Check if this looks like an assignment submission
-        const structureAnalysis = this.assignmentGrader.analyzeZipStructure(zip);
-        const isAssignmentZip = structureAnalysis.valid && this.assignmentGrader.detectAssignmentStructure(zip);
+        const analysis = this.testRunnerService.analyzeAssignmentStructure(zip);
 
-        if (isAssignmentZip) {
+        if (analysis.isValid && analysis.hasAssignmentStructure) {
             this.uiManager.showTestRunner();
-            this.assignmentGrader.runTestsOnAssignment(zip);
-        } else if (structureAnalysis.valid === false) {
+            this.testRunnerService.processAssignmentWithUI(zip);
+        } else if (analysis.isValid === false) {
             this.uiManager.showTestRunner();
-            this.assignmentGrader.runTestsOnAssignment(zip);
+            this.testRunnerService.processAssignmentWithUI(zip);
         }
 
         this.displayZipInfo(originalFile, zip);
@@ -87,7 +84,7 @@ class UploadHandler extends BaseUploadHandler {
         const clone = template.content.cloneNode(true);
 
         clone.querySelector('.zip-filename').textContent = originalFile.name;
-        clone.querySelector('.zip-filesize').textContent = this.fileUtils.formatBytes(originalFile.size);
+        clone.querySelector('.zip-filesize').textContent = this.fileViewer.fileUtils.formatBytes(originalFile.size);
         clone.querySelector('.zip-total-entries').textContent = fileCount;
         clone.querySelector('.zip-folders').textContent = folderCount;
         clone.querySelector('.zip-files').textContent = realFileCount;
@@ -127,10 +124,10 @@ class UploadHandler extends BaseUploadHandler {
             fileItem.classList.add('file-item--folder');
         }
 
-        const icon = zipEntry.dir ? '📁' : this.fileUtils.getFileIcon(zipEntry.name);
+        const icon = zipEntry.dir ? '📁' : this.fileViewer.fileUtils.getFileIcon(zipEntry.name);
         const size = zipEntry.dir
             ? ''
-            : this.fileUtils.formatBytes(zipEntry._data ? zipEntry._data.uncompressedSize : 0);
+            : this.fileViewer.fileUtils.formatBytes(zipEntry._data ? zipEntry._data.uncompressedSize : 0);
         const date = zipEntry.date ? zipEntry.date.toLocaleString() : '';
 
         clone.querySelector('.file-icon').textContent = icon;
@@ -181,46 +178,21 @@ class UploadHandler extends BaseUploadHandler {
 document.addEventListener('DOMContentLoaded', () => {
     // Use dependency container for service creation
     try {
-        const uiManager = container.get('uiManager');
-        const fileUtils = container.get('fileUtils');
-        const fileViewer = container.get('fileViewer');
-        const assignmentGrader = container.get('assignmentGrader');
-        const domUtils = container.get('domUtils');
-        const notificationService = container.get('notificationService');
-
-        // Initialize upload handler with all dependencies
-        window.uploadHandler = new UploadHandler(
-            uiManager,
-            fileUtils,
-            fileViewer,
-            assignmentGrader,
-            document,
-            console,
-            FileReader,
-            JSZip,
-            domUtils,
-            notificationService,
-        );
+        window.uploadHandler = container.get('uploadHandler');
     } catch (error) {
         console.error('Failed to initialize upload handler:', error);
 
-        // Fallback to manual initialization
-        const uiManager = new UIManager(document);
-        const fileUtils = new FileUtils();
-        const consoleManager = new ConsoleManager(console);
-        const fileViewer = new FileViewer(uiManager, fileUtils, document);
-        const testExecutor = new TestExecutor(consoleManager);
-        const assignmentGrader = new AssignmentGrader(testExecutor, fileUtils, document);
-
-        window.uploadHandler = new UploadHandler(
-            uiManager,
-            fileUtils,
-            fileViewer,
-            assignmentGrader,
-            document,
-            console,
-            FileReader,
-            JSZip,
-        );
+        // Fallback: Force container initialization and retry
+        try {
+            // Ensure container is initialized
+            if (typeof container === 'undefined') {
+                // Import and initialize container if not available
+                window.container = new DependencyContainer();
+            }
+            window.uploadHandler = container.get('uploadHandler');
+        } catch (fallbackError) {
+            console.error('Complete initialization failure:', fallbackError);
+            alert('Application failed to initialize. Please refresh the page.');
+        }
     }
 });

@@ -1,17 +1,27 @@
 // Batch Upload Handler Module - Focused and Lightweight
 class BatchUploadHandler extends BaseUploadHandler {
-    constructor(document, console, FileReader, JSZip, domUtils = null, notificationService = null, progressManager = null, resultsExporter = null, batchProcessor = null) {
+    constructor(
+        batchProcessor,
+        progressManager,
+        resultsExporter,
+        document,
+        console,
+        FileReader,
+        JSZip,
+        domUtils = null,
+        notificationService = null,
+    ) {
         super(domUtils || new DOMUtils(document), notificationService);
         this.document = document;
         this.console = console;
         this.FileReader = FileReader;
         this.JSZip = JSZip;
-        
-        // Inject dependencies or create new instances
-        this.batchProcessor = batchProcessor || new BatchProcessor();
-        this.progressManager = progressManager || new ProgressManager(this.domUtils);
-        this.resultsExporter = resultsExporter || new ResultsExporter();
-        
+
+        // Use injected dependencies
+        this.batchProcessor = batchProcessor;
+        this.progressManager = progressManager;
+        this.resultsExporter = resultsExporter;
+
         this.init();
     }
 
@@ -57,7 +67,13 @@ class BatchUploadHandler extends BaseUploadHandler {
             this.clearPreviousResults();
 
             // Extract individual student submissions
-            super.showLoading(true, 'bulkUploadBtn', 'bulkLoading', 'Extracting student submissions...', 'Process Bulk Submissions');
+            super.showLoading(
+                true,
+                'bulkUploadBtn',
+                'bulkLoading',
+                'Extracting student submissions...',
+                'Process Bulk Submissions',
+            );
 
             const submissions = await this.batchProcessor.extractStudentSubmissions(bulkZip);
 
@@ -66,7 +82,10 @@ class BatchUploadHandler extends BaseUploadHandler {
                 return;
             }
 
-            super.showSuccess(`Found ${submissions.length} student submissions. Starting processing...`, 'bulkSuccessMessage');
+            super.showSuccess(
+                `Found ${submissions.length} student submissions. Starting processing...`,
+                'bulkSuccessMessage',
+            );
             super.showLoading(false, 'bulkUploadBtn', 'bulkLoading');
 
             // Add submissions to processor
@@ -164,7 +183,7 @@ class BatchUploadHandler extends BaseUploadHandler {
         if (resultsContainer) {
             this.domUtils.clearElement(resultsContainer);
         }
-        
+
         const detailedResultsContainer = this.domUtils.getElementById('detailedResults');
         if (detailedResultsContainer) {
             this.domUtils.clearElement(detailedResultsContainer);
@@ -180,29 +199,36 @@ class BatchUploadHandler extends BaseUploadHandler {
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     try {
-        const domUtils = container.get('domUtils');
-        const notificationService = container.get('notificationService');
-        
-        // Create services
+        // Use dependency injection container to get all services
+        const batchUploadHandler = container.get('batchUploadHandler');
+        window.batchUploadHandler = batchUploadHandler;
+    } catch (error) {
+        console.error('Failed to initialize batch upload handler with DI:', error);
+
+        // Fallback to manual initialization only if DI fails completely
+        const domUtils = new DOMUtils(document);
+        const notificationService = new NotificationService(domUtils);
         const progressManager = new ProgressManager(domUtils);
         const resultsExporter = new ResultsExporter();
-        const batchProcessor = new BatchProcessor();
-        
+
+        // Create required dependencies for BatchProcessor
+        const consoleManager = new ConsoleManager(console);
+        const testExecutor = new TestExecutor(consoleManager);
+        const fileUtils = new FileUtils();
+        const assignmentGrader = new AssignmentGrader(testExecutor, fileUtils, document);
+        const testRunnerService = new TestRunnerService(testExecutor, fileUtils, assignmentGrader);
+        const batchProcessor = new BatchProcessor(testRunnerService);
+
         window.batchUploadHandler = new BatchUploadHandler(
-            document, 
-            console, 
-            FileReader, 
+            batchProcessor,
+            progressManager,
+            resultsExporter,
+            document,
+            console,
+            FileReader,
             JSZip,
             domUtils,
             notificationService,
-            progressManager,
-            resultsExporter,
-            batchProcessor
         );
-    } catch (error) {
-        console.error('Failed to initialize batch upload handler with DI:', error);
-        
-        // Fallback to manual initialization
-        window.batchUploadHandler = new BatchUploadHandler(document, console, FileReader, JSZip);
     }
 });

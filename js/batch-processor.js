@@ -1,10 +1,6 @@
 // Batch Processor Module
 class BatchProcessor {
-    constructor(
-        batchSize = AppConfig.BATCH_SETTINGS.DEFAULT_BATCH_SIZE,
-        testRunnerService = null,
-        assignmentGrader = null,
-    ) {
+    constructor(testRunnerService, batchSize = AppConfig.BATCH_SETTINGS.DEFAULT_BATCH_SIZE) {
         this.batchSize = batchSize;
         this.queue = [];
         this.results = new Map();
@@ -12,7 +8,6 @@ class BatchProcessor {
         this.completedCount = 0;
         this.failedCount = 0;
         this.testRunnerService = testRunnerService;
-        this.assignmentGrader = assignmentGrader;
     }
 
     async extractStudentSubmissions(bulkZip) {
@@ -135,16 +130,8 @@ class BatchProcessor {
             // Load and process the student's ZIP
             const studentZip = await JSZip.loadAsync(submission.zipData);
 
-            // Use injected services or create new instances as fallback
-            const testRunnerService =
-                this.testRunnerService ||
-                new TestRunnerService(new TestExecutor(new ConsoleManager(console)), new FileUtils());
-            const assignmentGrader =
-                this.assignmentGrader ||
-                new AssignmentGrader(new TestExecutor(new ConsoleManager(console)), new FileUtils(), document);
-
             // Use the test runner service to process tests
-            const testResult = await testRunnerService.processSubmissionTests(submission, studentZip, assignmentGrader);
+            const testResult = await this.testRunnerService.processSubmissionTests(submission, studentZip);
 
             if (testResult.status === 'error') {
                 submission.status = 'error';

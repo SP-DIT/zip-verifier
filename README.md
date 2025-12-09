@@ -2,60 +2,25 @@
 
 ## Overview
 
-This comprehensive test suite provides end-to-end testing for the ZIP file verifier application using Playwright. The application now includes both a **Student Verifier** tool and a **Batch Processor** for instructors, with extensive test coverage for various scenarios including edge cases and error handling.
-
-### Student Verifier Features
-Tests cover the main verification scenarios:
-
-1. **All Correct** - Assignment with all test cases passing
-2. **Some Correct** - Assignment with mixed results (some pass, some fail)
-3. **All Wrong** - Assignment with all test cases failing  
-4. **Wrong Structure** - ZIP file that doesn't match expected assignment structure
-5. **Extra Layer Structure** - ZIP files with additional folder nesting
-6. **Syntax Errors** - Handling JavaScript syntax errors in student code
-7. **Infinite Loops** - Timeout handling for problematic code execution
-
-### Batch Processor Features
-Tests for instructor tools:
-
-1. **Bulk Processing** - Handle multiple student submissions in one ZIP file
-2. **LMS Export Processing** - Process exports from Learning Management Systems
-3. **Progress Tracking** - Real-time processing progress and results
-4. **Results Export** - CSV and JSON export functionality
-
-## Test Files
-
-Pre-created test ZIP files are stored in `tests/fixtures/`:
-
-### Core Test Cases
-- `all-correct.zip` - Contains 5MockMSTSetA with correct solutions
-- `some-correct.zip` - Contains 6MockMSTSetB with one correct, one wrong solution
-- `all-wrong.zip` - Contains 7MockMSTSetC with incorrect solutions
-
-### Edge Cases & Error Handling
-- `extra-layer.zip` - Assignment with additional folder nesting (still valid structure)
-- `incorrect syntax.zip` - Contains JavaScript files with syntax errors
-- `infinite-loop.zip` - Contains code that would cause infinite loops/timeouts
-
-### Batch Processing
-- `bulk.zip` - Contains 7 student submissions for bulk processing
-- `sample LMS export.zip` - Simulates real LMS export format with 20+ submissions
+This comprehensive test suite provides end-to-end testing for the ZIP file verifier application using Playwright. The application includes both a **Student Verifier** tool and a **Batch Processor** for instructors.
 
 ## Setup
 
 1. Install dependencies:
-   ```bash
-   npm install
-   ```
+
+    ```bash
+    npm install
+    ```
 
 2. Install Playwright browsers:
-   ```bash
-   npx playwright install
-   ```
+    ```bash
+    npx playwright install
+    ```
 
 ## Running Tests
 
 ### Local Development
+
 ```bash
 # Run all tests (both student verifier and batch processor)
 npm test
@@ -71,128 +36,377 @@ npm run serve
 ```
 
 ### Individual Test Suites
+
 ```bash
 # Run only student verifier tests
 npx playwright test zip-verifier.spec.js
 
-# Run only batch processor tests  
+# Run only batch processor tests
 npx playwright test batch-upload.spec.js
 ```
 
 ### CI/CD
+
 ```bash
 # Run tests in CI mode with JUnit output
 npm run test:ci
 ```
 
-## Test Scenarios
-
-### Student Verifier Tests (`zip-verifier.spec.js`)
-
-#### 1. Application Loading
-- Verifies the main interface loads correctly
-- Checks all essential UI elements are present
-- Validates file input accepts ZIP files
-
-#### 2. All Correct Submissions
-- Uploads ZIP with all correct solutions
-- Verifies "✅ Accepted" status for all questions
-- Ensures no failed test cases are shown
-
-#### 3. Some Correct Submissions  
-- Uploads ZIP with mixed results
-- Verifies both "✅ Accepted" and "❌ Wrong Answer" statuses
-- Checks failure details are displayed for public test cases
-
-#### 4. All Wrong Submissions
-- Uploads ZIP with all incorrect solutions
-- Verifies "❌ Wrong Answer" status for all questions
-- Ensures detailed failure information is shown
-
-#### 5. Wrong File Structure
-- Uploads ZIP that doesn't match expected structure
-- Verifies structure error message is displayed
-- Checks helpful suggestions are provided
-
-#### 6. Extra Layer Structure Handling
-- Tests ZIP files with additional folder nesting
-- Verifies the system can still find valid assignment structure
-- Ensures proper processing despite extra folders
-
-#### 7. Syntax Error Handling
-- Tests JavaScript files with syntax errors
-- Verifies proper error messages are displayed
-- Ensures other valid questions still process correctly
-
-#### 8. Infinite Loop/Timeout Handling
-- Tests code that would cause infinite loops
-- Verifies timeout mechanisms work properly
-- Ensures system doesn't hang during processing
-
-#### 9. ZIP Content Display
-- Tests file tree display functionality
-- Verifies ZIP metadata is shown correctly
-- Checks file viewing capabilities
-
-### Batch Processor Tests (`batch-upload.spec.js`)
-
-#### 1. Bulk ZIP Processing
-- Tests processing of multiple student submissions in one file
-- Verifies progress tracking during processing
-- Validates results summary with submission counts
-- Tests CSV/JSON export functionality
-
-#### 2. LMS Export Processing
-- Tests processing of realistic LMS export files
-- Handles 20+ student submissions efficiently
-- Verifies proper parsing of student IDs and scores
-- Tests scalability with larger datasets
-
 ## Application Architecture
 
-The application consists of two main interfaces:
+The application consists of two main interfaces with a sophisticated modular architecture built around dependency injection and service-oriented design patterns.
 
-### Student Verifier (`index.html`)
-- Single ZIP file upload and verification
-- Real-time test execution and results display
-- Detailed error reporting and code analysis
-- ZIP file content exploration
+### System Overview
 
-### Batch Processor (`batch.html`) 
-- Instructor tool for processing multiple submissions
-- Progress tracking for bulk operations
-- Results aggregation and export capabilities
-- Support for various LMS export formats
+```mermaid
+flowchart TB
+    subgraph "User Interfaces"
+        Student[Student Verifier<br/>Single ZIP Processing]
+        Batch[Batch Processor<br/>Bulk ZIP Processing]
+    end
 
-## CI Integration
+    subgraph "Core Services"
+        TestRunner[TestRunnerService<br/>Test Orchestration]
+        BatchProc[BatchProcessor<br/>Bulk Operations]
+    end
 
-The GitHub Actions workflow runs tests on:
-- Push to main/develop branches
-- Pull requests to main branch
+    subgraph "Infrastructure"
+        DI[Dependency Injection<br/>Container]
+        Base[Base Classes<br/>& Utilities]
+    end
 
-Test artifacts and reports are uploaded for review.
+    Student --> TestRunner
+    Batch --> BatchProc
+    BatchProc --> TestRunner
 
-## File Structure
+    DI --> Student
+    DI --> Batch
+    DI --> TestRunner
+    DI --> BatchProc
 
-```
-tests/
-├── fixtures/
-│   ├── all-correct.zip           # Perfect submission
-│   ├── some-correct.zip          # Mixed results
-│   ├── all-wrong.zip             # All failing tests
-│   ├── extra-layer.zip           # Extra folder nesting
-│   ├── incorrect syntax.zip      # JavaScript syntax errors  
-│   ├── infinite-loop.zip         # Timeout/infinite loop code
-│   ├── bulk.zip                  # 7 submissions for batch testing
-│   ├── sample LMS export.zip     # Realistic LMS export (20+ submissions)
-│   └── temp_files/               # Source files used to create ZIPs
-├── zip-verifier.spec.js          # Student verifier tests (11 test cases)
-└── batch-upload.spec.js          # Batch processor tests (2 test cases)
+    TestRunner --> Base
+    BatchProc --> Base
 ```
 
-### Test Coverage Summary
-- **Total Test Cases**: 13 automated tests
-- **Student Verifier**: 11 comprehensive test scenarios
-- **Batch Processor**: 2 bulk processing scenarios
-- **Edge Cases**: Syntax errors, timeouts, structure variations
-- **Error Handling**: Comprehensive validation and user feedback
+### Student Verifier Architecture
+
+```mermaid
+flowchart LR
+    subgraph "Student Interface"
+        UI_Student[index.html<br/>Student Interface]
+    end
+
+    subgraph "Upload Processing"
+        UH[UploadHandler]
+        Base[BaseUploadHandler]
+    end
+
+    subgraph "File Analysis & Viewing"
+        FU[FileUtils]
+        FV[FileViewer]
+    end
+
+    subgraph "Test Execution"
+        TE[TestExecutor]
+        TRS[TestRunnerService]
+        AG[AssignmentGrader]
+        CM[ConsoleManager]
+    end
+
+    subgraph "User Experience"
+        NS[NotificationService]
+        UI_Mgr[UIManager]
+        DOM[DOMUtils]
+    end
+
+    UI_Student --> UH
+    UH --> Base
+    UH --> TRS
+    UH --> FV
+
+    TRS --> AG
+    TRS --> TE
+    AG --> TE
+
+    TE --> CM
+
+    UH --> UI_Mgr
+    Base --> NS
+    NS --> DOM
+    UI_Mgr --> DOM
+
+    FV --> UI_Mgr
+    FV --> FU
+```
+
+### Batch Processor Architecture
+
+```mermaid
+flowchart LR
+    subgraph "Batch Interface"
+        UI_Batch[batch.html<br/>Instructor Interface]
+    end
+
+    subgraph "Bulk Processing"
+        BUH[BatchUploadHandler]
+        BP[BatchProcessor]
+        TRS[TestRunnerService]
+    end
+
+    subgraph "Progress & Results"
+        PM[ProgressManager]
+        RE[ResultsExporter]
+    end
+
+    subgraph "Core Services"
+        AG[AssignmentGrader]
+        TE[TestExecutor]
+        Base[BaseUploadHandler]
+    end
+
+    subgraph "Note: Batch Processing"
+        Note["🎯 No FileViewer needed<br/>Focus on bulk results<br/>not individual file viewing"]
+    end
+
+    subgraph "UI Infrastructure"
+        DOM[DOMUtils]
+        NS[NotificationService]
+    end
+
+    UI_Batch --> BUH
+    BUH --> Base
+    BUH --> BP
+    BUH --> PM
+    BUH --> RE
+
+    BP --> TRS
+    TRS --> AG
+    AG --> TE
+
+    PM --> DOM
+    Base --> NS
+    NS --> DOM
+
+    BP --> AG
+```
+
+### Service Dependencies & Interactions
+
+```mermaid
+classDiagram
+    class BaseUploadHandler {
+        +DOMUtils domUtils
+        +NotificationService notificationService
+        +isValidZipFile(file)
+        +setupDragAndDrop()
+        +handleSubmit()
+    }
+
+    class UploadHandler {
+        +UIManager uiManager
+        +FileViewer fileViewer
+        +TestRunnerService testRunnerService
+        +readZipFile()
+        +processZipContent()
+    }
+
+    class BatchUploadHandler {
+        +BatchProcessor batchProcessor
+        +ProgressManager progressManager
+        +ResultsExporter resultsExporter
+        +readBulkZipFile()
+        +processBulkSubmissions()
+    }
+
+    class AssignmentGrader {
+        +TestExecutor testExecutor
+        +FileUtils fileUtils
+        +detectAssignmentStructure()
+        +runTestsOnAssignment()
+    }
+
+    class TestExecutor {
+        +ConsoleManager consoleManager
+        +executeTests()
+        +executeWithTimeout()
+    }
+
+    class NotificationService {
+        +DOMUtils domUtils
+        +showError()
+        +showSuccess()
+    }
+
+    class FileViewer {
+        +UIManager uiManager
+        +FileUtils fileUtils
+        +viewFile()
+        +downloadFile()
+    }
+
+    class BatchProcessor {
+        +TestRunnerService testRunnerService
+        +extractStudentSubmissions()
+        +processAll()
+    }
+
+    class TestRunnerService {
+        +TestExecutor testExecutor
+        +FileUtils fileUtils
+        +AssignmentGrader assignmentGrader
+        +runTestsForAssignment()
+        +processSubmissionTests()
+        +analyzeAssignmentStructure()
+        +processAssignmentWithUI()
+    }
+
+    %% Inheritance relationships
+    BaseUploadHandler <|-- UploadHandler
+    BaseUploadHandler <|-- BatchUploadHandler
+
+    %% Core dependencies (what each class needs to function)
+    UploadHandler --> TestRunnerService
+    UploadHandler --> FileViewer
+    BatchUploadHandler --> BatchProcessor
+    BatchUploadHandler --> ProgressManager
+    BatchUploadHandler --> ResultsExporter
+    BatchProcessor --> TestRunnerService
+    TestRunnerService --> TestExecutor
+    TestRunnerService --> AssignmentGrader
+    AssignmentGrader --> TestExecutor
+    TestExecutor --> ConsoleManager
+
+    %% Service usage relationships
+    BaseUploadHandler --> NotificationService
+    NotificationService --> DOMUtils
+    FileViewer --> UIManager
+    FileViewer --> FileUtils
+
+    %% Note: FileViewer is only used by UploadHandler (Student Interface)
+    %% BatchUploadHandler (Instructor Interface) focuses on bulk processing
+    %% without individual file viewing capabilities
+```
+
+### Dependency Injection Container Architecture
+
+```mermaid
+flowchart TB
+    subgraph "Dependency Container Pattern"
+        DC[DependencyContainer<br/>Central Service Registry]
+
+        subgraph "Service Factories"
+            F1[Core Services Factory<br/>DOM, File Utils, Console]
+            F2[UI Services Factory<br/>Notification, UI Manager]
+            F3[Processing Factory<br/>Test Executor, Grader]
+            F4[Batch Services Factory<br/>Processor, Progress, Export]
+        end
+
+        subgraph "Runtime Services"
+            Core[Core Services<br/>DOMUtils, FileUtils, ConsoleManager]
+            UI[UI Services<br/>NotificationService, UIManager, FileViewer]
+            Process[Processing Services<br/>TestExecutor, AssignmentGrader]
+            Batch[Batch Services<br/>BatchProcessor, ProgressManager, ResultsExporter]
+        end
+
+        subgraph "Application Components"
+            UH[UploadHandler]
+            BUH[BatchUploadHandler]
+        end
+    end
+
+    DC --> F1
+    DC --> F2
+    DC --> F3
+    DC --> F4
+
+    F1 --> Core
+    F2 --> UI
+    F3 --> Process
+    F4 --> Batch
+
+    Core --> UH
+    UI --> UH
+    Process --> UH
+
+    Core --> BUH
+    UI --> BUH
+    Batch --> BUH
+
+    style DC fill:#e1f5fe
+    style UH fill:#f3e5f5
+    style BUH fill:#f3e5f5
+```
+
+### Test Execution Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant UH as UploadHandler
+    participant TRS as TestRunnerService
+    participant AG as AssignmentGrader
+    participant TE as TestExecutor
+    participant UI as UIManager
+
+    U->>UH: Upload ZIP file
+    UH->>TRS: analyzeAssignmentStructure(zip)
+    TRS->>AG: analyzeZipStructure(zip)
+    TRS-->>UH: structure analysis
+
+    alt Valid Structure
+        UH->>TRS: processAssignmentWithUI(zip)
+        TRS->>AG: runTestsOnAssignment(zip)
+
+        AG->>AG: extractAssignmentStructure(zip)
+        AG->>AG: runAllTests(zip, structure)
+
+        loop For each question
+            AG->>AG: runTestsForQuestion(zip, item)
+            AG->>TE: executeTests(code, tests)
+            TE->>TE: parseCodeModule(code)
+            TE->>TE: parseTestModule(tests)
+            TE->>TE: executeWithTimeout(func, args)
+            TE-->>AG: test results
+        end
+
+        AG->>UI: displayTestResults(results)
+    else Invalid Structure
+        UH->>TRS: processAssignmentWithUI(zip)
+        TRS->>AG: runTestsOnAssignment(zip)
+        AG->>UI: displayStructureError(analysis)
+    end
+
+    UI-->>U: Display results/errors
+```
+
+### Batch Processing Flow
+
+```mermaid
+sequenceDiagram
+    participant I as Instructor
+    participant BUH as BatchUploadHandler
+    participant BP as BatchProcessor
+    participant PM as ProgressManager
+    participant TRS as TestRunnerService
+    participant RE as ResultsExporter
+
+    I->>BUH: Upload bulk ZIP
+    BUH->>BP: extractStudentSubmissions(bulkZip)
+    BP->>PM: initialize(submissions)
+
+    BUH->>BP: processAll(progressCallback)
+
+    loop Process batches
+        BP->>BP: createBatches()
+
+        loop For each batch
+            BP->>TRS: processSubmissionTests(submission)
+            TRS-->>BP: submission results
+            BP->>PM: updateProgress(progress)
+        end
+    end
+
+    BP-->>BUH: final results
+    BUH->>RE: exportResults(format)
+    RE-->>I: Download results file
+```

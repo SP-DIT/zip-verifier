@@ -1,8 +1,9 @@
 // Test Runner Service
 class TestRunnerService {
-    constructor(testExecutor, fileUtils) {
+    constructor(testExecutor, fileUtils, assignmentGrader = null) {
         this.testExecutor = testExecutor;
         this.fileUtils = fileUtils;
+        this.assignmentGrader = assignmentGrader;
     }
 
     async runTestsForAssignment(zip, assignmentStructure) {
@@ -65,10 +66,25 @@ class TestRunnerService {
         return JSON.stringify(value);
     }
 
-    async processSubmissionTests(submission, studentZip, assignmentGrader) {
+    analyzeAssignmentStructure(zip) {
+        const structureAnalysis = this.assignmentGrader.analyzeZipStructure(zip);
+        const hasAssignmentStructure = this.assignmentGrader.detectAssignmentStructure(zip);
+
+        return {
+            isValid: structureAnalysis.valid,
+            hasAssignmentStructure: hasAssignmentStructure,
+            error: structureAnalysis.error,
+        };
+    }
+
+    processAssignmentWithUI(zip) {
+        this.assignmentGrader.runTestsOnAssignment(zip);
+    }
+
+    async processSubmissionTests(submission, studentZip) {
         try {
             // Analyze and process the assignment
-            const structureAnalysis = assignmentGrader.analyzeZipStructure(studentZip);
+            const structureAnalysis = this.assignmentGrader.analyzeZipStructure(studentZip);
 
             if (!structureAnalysis.valid) {
                 return {
@@ -78,7 +94,7 @@ class TestRunnerService {
                 };
             }
 
-            const assignmentStructure = assignmentGrader.extractAssignmentStructure(studentZip);
+            const assignmentStructure = this.assignmentGrader.extractAssignmentStructure(studentZip);
 
             if (assignmentStructure.length === 0) {
                 return {

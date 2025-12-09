@@ -46,7 +46,12 @@ class DependencyContainer {
 
         this.register(
             'testRunnerService',
-            (container) => new TestRunnerService(container.get('testExecutor'), container.get('fileUtils')),
+            (container) =>
+                new TestRunnerService(
+                    container.get('testExecutor'),
+                    container.get('fileUtils'),
+                    container.get('assignmentGrader'),
+                ),
         );
 
         // UI Manager with proper dependencies
@@ -70,6 +75,48 @@ class DependencyContainer {
         this.register(
             'assignmentGrader',
             (container) => new AssignmentGrader(container.get('testExecutor'), container.get('fileUtils'), document),
+        );
+
+        // Batch processing services
+        this.register(
+            'batchProcessor',
+            (container) =>
+                new BatchProcessor(container.get('testRunnerService'), AppConfig.BATCH_SETTINGS.DEFAULT_BATCH_SIZE),
+        );
+        this.register('progressManager', (container) => new ProgressManager(container.get('domUtils')));
+        this.register('resultsExporter', () => new ResultsExporter());
+
+        // Upload handlers with proper dependencies
+        this.register(
+            'uploadHandler',
+            (container) =>
+                new UploadHandler(
+                    container.get('uiManager'),
+                    container.get('fileViewer'),
+                    container.get('testRunnerService'),
+                    document,
+                    console,
+                    FileReader,
+                    JSZip,
+                    container.get('domUtils'),
+                    container.get('notificationService'),
+                ),
+        );
+
+        this.register(
+            'batchUploadHandler',
+            (container) =>
+                new BatchUploadHandler(
+                    container.get('batchProcessor'),
+                    container.get('progressManager'),
+                    container.get('resultsExporter'),
+                    document,
+                    console,
+                    FileReader,
+                    JSZip,
+                    container.get('domUtils'),
+                    container.get('notificationService'),
+                ),
         );
 
         // Base upload handler
