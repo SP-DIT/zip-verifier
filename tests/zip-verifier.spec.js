@@ -41,6 +41,51 @@ test.describe('ZIP Verifier End-to-End Tests', () => {
         await expect(page.locator('text=❌ No valid assignment structure found')).toBeVisible();
     });
 
+    test('should handle file upload process', async ({ page }) => {
+        const filePath = path.resolve('tests/fixtures/all-correct.zip');
+
+        // Initially, the file input should be empty and no success message should be shown
+        const fileInput = page.locator('input[type="file"]');
+        await expect(fileInput).toBeVisible();
+        await expect(page.locator('text=✅ Successfully loaded ZIP file:')).not.toBeVisible();
+
+        // Upload the file directly to the file input
+        await page.setInputFiles('input[type="file"]', filePath);
+
+        // Check that Read ZIP File button is enabled/clickable
+        const readButton = page.getByRole('button', { name: 'Read ZIP File' });
+        await expect(readButton).toBeVisible();
+        await expect(readButton).toBeEnabled();
+
+        // Click Read ZIP File to process the upload
+        await readButton.click();
+
+        // Verify the upload was successful by checking for the success message
+        await expect(page.locator('text=✅ Successfully loaded ZIP file:')).toBeVisible({ timeout: 10000 });
+
+        // Check that ZIP information section appears
+        await expect(page.locator('h3:has-text("📊 ZIP Information")')).toBeVisible();
+
+        // Check that the specific filename appears in the ZIP information section
+        await expect(page.locator('.zip-filename:has-text("all-correct.zip")')).toBeVisible();
+
+        // Verify that the Code Test Runner section appears and shows correct results
+        await expect(page.locator('h2:has-text("🧪 Code Test Runner")')).toBeVisible();
+        await expect(page.locator('h3:has-text("📊 Test Results")')).toBeVisible();
+
+        // Check that assignment structure is correctly identified
+        await expect(page.locator('text=📁 Assignment Structure Found:')).toBeVisible();
+        await expect(page.locator('text=5MockMSTSetA/q1')).toBeVisible();
+        await expect(page.locator('text=5MockMSTSetA/q2')).toBeVisible();
+        await expect(page.locator('text=Total Questions: 2')).toBeVisible();
+
+        // Verify that both questions show as accepted with correct test results
+        await expect(page.locator('text=✅ Accepted').first()).toBeVisible(); // q1 result
+        await expect(page.locator('text=(3/3 test cases passed)').first()).toBeVisible(); // q1 details
+        await expect(page.locator('text=✅ Accepted').nth(1)).toBeVisible(); // q2 result  
+        await expect(page.locator('text=(3/3 test cases passed)').nth(1)).toBeVisible(); // q2 details
+    });
+
     test('should display ZIP file information correctly', async ({ page }) => {
         const filePath = path.resolve('tests/fixtures/all-correct.zip');
 
