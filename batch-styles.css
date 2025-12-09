@@ -117,8 +117,6 @@
 
 /* Student Progress List */
 .student-progress-list {
-    max-height: 400px;
-    overflow-y: auto;
     border: 1px solid #dee2e6;
     border-radius: 6px;
     background: white;
@@ -453,8 +451,6 @@
     background: white;
     border: 1px solid #dee2e6;
     border-radius: 8px;
-    max-height: 500px;
-    overflow-y: auto;
 }
 
 .result-item {
