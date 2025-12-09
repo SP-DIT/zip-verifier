@@ -1,5 +1,7 @@
 # ZIP Verifier - AI-Assisted Development Journey
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-blue?style=for-the-badge&logo=github)](https://sp-dit.github.io/zip-verifier/)
+
 ## Overview
 
 This ZIP Verifier provides students a chance to verify their code submission before uploading to Brightspace. During FOP's MST/EST, students occasionally submit the wrong zip file (blank template instead of their completed code), resulting in automatic zero scores. This tool allows verification of zip files by executing code against test cases within the browser.
