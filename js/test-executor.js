@@ -34,20 +34,36 @@ class TestExecutor {
 
                     let result;
                     try {
-                        result = this.executeWithTimeout(codeFunction.fn, input);
+                        // Handle commands-based testing
+                        if (options.type === 'commands') {
+                            result = this.runCommandBasedTest(codeFunction.fn, testCase);
+                        } else {
+                            // Handle regular testing (non-commands)
+                            result = this.executeWithTimeout(codeFunction.fn, input);
+                        }
                     } finally {
                         // Always restore original console.log
                         this.consoleManager.restore();
                     }
 
-                    const passed = this.compareResults(result, expected, options);
+                    let passed;
+                    let actualResults;
+
+                    // For command-based tests, the result object has a 'passed' property
+                    if (options.type === 'commands') {
+                        passed = result.passed;
+                        actualResults = result.actual;
+                    } else {
+                        passed = this.compareResults(result, expected, options);
+                        actualResults = result;
+                    }
 
                     testResults.testCases.push({
                         index: index + 1,
                         passed,
                         input,
-                        expected,
-                        actual: result,
+                        expected: options.type === 'commands' ? result.expected : expected,
+                        actual: actualResults,
                         isPublic,
                         description,
                         error: null,
@@ -63,7 +79,7 @@ class TestExecutor {
                         index: index + 1,
                         passed: false,
                         input: testCase.input,
-                        expected: testCase.expected,
+                        expected: options.type === 'commands' ? testCase.expected.map((e) => e.value) : testCase.expected,
                         actual: null,
                         isPublic: testCase.isPublic,
                         description: testCase.description,
@@ -87,6 +103,55 @@ class TestExecutor {
         } catch (error) {
             throw error;
         }
+    }
+
+    // Run command-based test cases
+    runCommandBasedTest(runCode, testCase) {
+        const { input, expected, commands } = testCase;
+
+        // Create the object using the input parameters
+        const obj = this.executeWithTimeout(runCode, input);
+
+        // Execute each command and collect results
+        const actualResults = [];
+        let allPassed = true;
+
+        for (let i = 0; i < commands.length; i++) {
+            const command = commands[i];
+            const expectedItem = expected[i];
+
+            try {
+                // Check if method exists
+                if (typeof obj[command.method] !== 'function') {
+                    throw new TypeError(`${command.method} is not a function or does not exist on the returned object`);
+                }
+
+                // Execute the method on the object
+                const actualResult = obj[command.method](...command.params);
+                actualResults.push(actualResult);
+
+                // Get comparison options (can be per-command or use defaults)
+                const compareOptions = expectedItem.options || {};
+
+                // Compare the result
+                const passed = this.compareResults(actualResult, expectedItem.value, compareOptions);
+
+                if (!passed) {
+                    allPassed = false;
+                }
+            } catch (error) {
+                // If there's an error executing the command, treat it as a failed test
+                actualResults.push(`Error: ${error.message}`);
+                allPassed = false;
+            }
+        }
+
+        return {
+            passed: allPassed,
+            expected: expected.map((e) => e.value),
+            actual: actualResults,
+            commands,
+        };
     }
 
     parseTestModule(testContent) {
