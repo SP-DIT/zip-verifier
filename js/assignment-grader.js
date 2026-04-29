@@ -4,6 +4,7 @@ class AssignmentGrader {
         this.testExecutor = testExecutor;
         this.fileUtils = fileUtils;
         this.document = document;
+        this.currentZip = null;
     }
 
     // Normalize paths to use forward slashes for consistent processing
@@ -132,6 +133,7 @@ class AssignmentGrader {
     }
 
     runTestsOnAssignment(zip) {
+        this.currentZip = zip; // Store zip reference for file viewing
         const testResults = this.document.getElementById('testResults');
         this.setLoadingStatus(testResults, '🔍 Analyzing assignment structure...');
 
@@ -278,14 +280,30 @@ class AssignmentGrader {
         for (const item of assignmentStructure) {
             const resultTemplate = this.document.getElementById('test-result-container-template');
             const resultClone = resultTemplate.content.cloneNode(true);
-            
+
             const header = resultClone.querySelector('.test-header');
             header.textContent = `${item.problemSet}/${item.question}`;
-            
+
             const content = resultClone.querySelector('.test-content');
             content.id = `tests-${item.question}`;
             content.textContent = 'Running tests...';
-            
+
+            // Setup View Files button
+            const viewFilesBtn = resultClone.querySelector('.btn--view-files');
+            const fileViewer = resultClone.querySelector('.test-file-viewer');
+            const fileList = resultClone.querySelector('.file-list');
+
+            viewFilesBtn.onclick = () => {
+                if (fileViewer.style.display === 'none') {
+                    this.showFilesForQuestion(item, fileList, fileViewer);
+                    fileViewer.style.display = 'block';
+                    viewFilesBtn.innerHTML = '<span class="btn-icon">🙈</span> Hide Files';
+                } else {
+                    fileViewer.style.display = 'none';
+                    viewFilesBtn.innerHTML = '<span class="btn-icon">👁️</span> View Files';
+                }
+            };
+
             testResults.appendChild(resultClone);
         }
 
@@ -317,12 +335,12 @@ class AssignmentGrader {
         this.clearElement(container);
 
         const totalTests = results.passed + results.failed;
-        
+
         // Create main result status
         const statusTemplate = this.document.getElementById('test-case-template');
         const statusClone = statusTemplate.content.cloneNode(true);
         const statusDiv = statusClone.querySelector('.test-case');
-        
+
         if (results.failed === 0) {
             statusDiv.classList.add('test-passed');
             const statusText = this.document.createElement('strong');
@@ -336,7 +354,7 @@ class AssignmentGrader {
             statusDiv.appendChild(statusText);
             statusDiv.appendChild(this.document.createTextNode(` (${results.passed}/${totalTests} test cases passed)`));
         }
-        
+
         container.appendChild(statusClone);
 
         // Display failed test details
@@ -351,7 +369,7 @@ class AssignmentGrader {
                 const headerClone = headerTemplate.content.cloneNode(true);
                 const headerDiv = headerClone.querySelector('.test-case');
                 headerDiv.classList.add('test-failed');
-                
+
                 if (testCase.isPublic) {
                     const headerText = this.document.createElement('strong');
                     headerText.textContent = `Test ${testCase.index}: Wrong Answer`;
@@ -361,15 +379,19 @@ class AssignmentGrader {
                     // Create test details
                     const detailsTemplate = this.document.getElementById('test-case-details-template');
                     const detailsClone = detailsTemplate.content.cloneNode(true);
-                    
-                    detailsClone.querySelector('.input-value').textContent = this.fileUtils.formatTestValue(testCase.input);
-                    detailsClone.querySelector('.expected-value').textContent = this.fileUtils.formatTestValue(testCase.expected);
-                    
-                    const outputValue = testCase.error 
+
+                    detailsClone.querySelector('.input-value').textContent = this.fileUtils.formatTestValue(
+                        testCase.input,
+                    );
+                    detailsClone.querySelector('.expected-value').textContent = this.fileUtils.formatTestValue(
+                        testCase.expected,
+                    );
+
+                    const outputValue = testCase.error
                         ? `Runtime Error: ${testCase.error}`
                         : this.fileUtils.formatTestValue(testCase.actual);
                     detailsClone.querySelector('.output-value').textContent = outputValue;
-                    
+
                     detailsContainer.appendChild(detailsClone);
                 } else {
                     const headerText = this.document.createElement('strong');
@@ -395,7 +417,7 @@ class AssignmentGrader {
         const template = this.document.getElementById('loading-status-template');
         const clone = template.content.cloneNode(true);
         clone.querySelector('.loading-status').textContent = message;
-        
+
         this.clearElement(container);
         container.appendChild(clone);
     }
@@ -406,7 +428,7 @@ class AssignmentGrader {
         const messageDiv = clone.querySelector('.message');
         messageDiv.classList.add('message--error');
         messageDiv.textContent = message;
-        
+
         this.clearElement(container);
         container.appendChild(clone);
     }
@@ -417,8 +439,79 @@ class AssignmentGrader {
         const caseDiv = clone.querySelector('.test-case');
         caseDiv.classList.add('test-error');
         caseDiv.textContent = message;
-        
+
         this.clearElement(container);
         container.appendChild(clone);
+    }
+
+    showFilesForQuestion(item, fileList, fileViewer) {
+        // Clear previous content
+        this.clearElement(fileList);
+
+        // Only show code.js files for this question
+        const codeFile = item.codeFile;
+
+        // Create file item
+        const fileItem = this.document.createElement('div');
+        fileItem.className = 'file-item file-item--code';
+
+        const icon = this.document.createElement('span');
+        icon.className = 'file-icon';
+        icon.textContent = '📄';
+
+        const name = this.document.createElement('span');
+        name.className = 'file-name';
+        name.textContent = codeFile.split('/').pop(); // Just show filename
+
+        const viewBtn = this.document.createElement('button');
+        viewBtn.className = 'btn btn--small btn--view-code';
+        viewBtn.innerHTML = '👁️ View';
+        viewBtn.onclick = () => this.viewCodeFile(codeFile, fileViewer);
+
+        fileItem.appendChild(icon);
+        fileItem.appendChild(name);
+        fileItem.appendChild(viewBtn);
+
+        fileList.appendChild(fileItem);
+    }
+
+    async viewCodeFile(filePath, fileViewer) {
+        try {
+            const file = this.currentZip.file(filePath);
+            if (!file) {
+                this.showFileError(fileViewer, 'File not found in ZIP archive.');
+                return;
+            }
+
+            const content = await file.async('string');
+            const contentDisplay = fileViewer.querySelector('.file-content-display');
+            const header = contentDisplay.querySelector('.content-header');
+            const body = contentDisplay.querySelector('.content-body');
+
+            header.innerHTML = `<h5>📄 ${filePath.split('/').pop()}</h5>`;
+
+            // Format code content
+            body.innerHTML = `<pre><code class="language-javascript">${this.escapeHtml(content)}</code></pre>`;
+
+            contentDisplay.style.display = 'block';
+        } catch (error) {
+            this.showFileError(fileViewer, `Error loading file: ${error.message}`);
+        }
+    }
+
+    showFileError(fileViewer, message) {
+        const contentDisplay = fileViewer.querySelector('.file-content-display');
+        const header = contentDisplay.querySelector('.content-header');
+        const body = contentDisplay.querySelector('.content-body');
+
+        header.innerHTML = '<h5>❌ Error</h5>';
+        body.innerHTML = `<p class="error-message">${message}</p>`;
+        contentDisplay.style.display = 'block';
+    }
+
+    escapeHtml(text) {
+        const div = this.document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 }

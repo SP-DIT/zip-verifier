@@ -48,6 +48,32 @@ class FileViewer {
                 .then((content) => {
                     contentHeader.textContent = `📄 ${filename} (${this.fileUtils.formatBytes(content.length)})`;
                     contentBody.textContent = content;
+                    
+                    // Apply syntax highlighting if available
+                    if (window.hljs) {
+                        // Detect language from file extension
+                        const ext = filename.toLowerCase().split('.').pop();
+                        const languageMap = {
+                            'js': 'javascript',
+                            'java': 'java',
+                            'py': 'python',
+                            'cpp': 'cpp',
+                            'c': 'c',
+                            'cs': 'csharp',
+                            'html': 'html',
+                            'css': 'css',
+                            'json': 'json',
+                            'xml': 'xml',
+                            'sql': 'sql',
+                        };
+                        const language = languageMap[ext] || ext;
+                        
+                        try {
+                            hljs.highlightElement(contentBody);
+                        } catch (e) {
+                            console.log('Could not highlight code:', e);
+                        }
+                    }
                 })
                 .catch((error) => {
                     contentHeader.textContent = `❌ Error reading: ${filename}`;

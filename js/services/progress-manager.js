@@ -4,33 +4,28 @@ class ProgressManager {
         this.container = null;
         this.submissions = [];
         this.domUtils = domUtils || new DOMUtils(document);
+        this.onViewFilesCallback = null; // Callback for file viewing
     }
 
-    initialize(submissions, container) {
-        if (!container) {
-            console.error('Container element is null in ProgressManager.initialize');
-            return;
-        }
-        if (!submissions) {
-            console.error('Submissions array is null in ProgressManager.initialize');
+    initialize(submissions, container, onViewFilesCallback = null) {
+        if (!container || !submissions) {
             return;
         }
 
         this.submissions = submissions;
         this.container = container;
+        this.onViewFilesCallback = onViewFilesCallback;
         this.render();
     }
 
     render() {
         const template = this.domUtils.getElementById('progress-dashboard-template');
         if (!template) {
-            console.error('Progress dashboard template not found');
             return;
         }
 
         const clone = template.content.cloneNode(true);
         if (!clone) {
-            console.error('Failed to clone progress dashboard template');
             return;
         }
 
@@ -103,13 +98,11 @@ class ProgressManager {
         submissions.forEach((submission) => {
             const template = this.domUtils.getElementById('student-progress-item-template');
             if (!template) {
-                console.error('Student progress item template not found');
                 return;
             }
 
             const clone = template.content.cloneNode(true);
             if (!clone) {
-                console.error('Failed to clone template content');
                 return;
             }
 
@@ -132,7 +125,6 @@ class ProgressManager {
             if (!expandBtn) missingElements.push('expand-btn');
 
             if (missingElements.length > 0) {
-                console.error('Missing template elements:', missingElements, 'for submission:', submission.id);
                 return;
             }
 
@@ -260,6 +252,18 @@ class ProgressManager {
             // Question header
             questionNameEl.textContent = questionName;
 
+            // Set question data attribute for file viewing
+            const viewCodeBtn = questionClone.querySelector('.view-question-code-btn');
+            if (viewCodeBtn) {
+                viewCodeBtn.setAttribute('data-question', questionName);
+                viewCodeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    // Find the actual DOM element that contains this button
+                    const actualQuestionElement = e.target.closest('.question-result');
+                    this.toggleQuestionFileViewer(submission.id, questionName, actualQuestionElement);
+                });
+            }
+
             // Score and status
             let scoreClass = 'failed';
             let scoreText = 'Failed';
@@ -307,6 +311,92 @@ class ProgressManager {
         });
 
         container.appendChild(clone);
+    }
+
+    toggleQuestionFileViewer(studentId, questionName, questionElement) {
+        const fileViewer = questionElement.querySelector('.question-file-viewer');
+        const viewCodeBtn = questionElement.querySelector('.view-question-code-btn');
+
+        if (!fileViewer || !viewCodeBtn) {
+            return;
+        }
+
+        if (fileViewer.style.display === 'none') {
+            this.showQuestionCode(studentId, questionName, fileViewer);
+            fileViewer.style.display = 'block';
+            viewCodeBtn.innerHTML = '<span>🙈 Hide Code</span>';
+        } else {
+            fileViewer.style.display = 'none';
+            viewCodeBtn.innerHTML = '<span>👁️ See Code</span>';
+        }
+    }
+
+    async showQuestionCode(studentId, questionName, fileViewer) {
+        try {
+            if (this.onViewFilesCallback && this.onViewFilesCallback.getStudentZip) {
+                const studentZip = this.onViewFilesCallback.getStudentZip(studentId);
+                if (!studentZip) {
+                    this.showQuestionFileError(fileViewer, `No ZIP file found for student ${studentId}`);
+                    return;
+                }
+
+                // Look for code.js file for this specific question
+                const questionPath = questionName.toLowerCase().replace(/[^a-z0-9]/g, ''); // normalize question name
+                const codeFiles = Object.values(studentZip.files).filter((file) => {
+                    if (file.dir || !file.name.includes('code.js')) return false;
+
+                    // Check if this code file belongs to this question
+                    const filePath = file.name.toLowerCase();
+                    return (
+                        filePath.includes(`/${questionPath}/`) ||
+                        filePath.includes(`q${questionName.match(/\d+/) ? questionName.match(/\d+/)[0] : '1'}/`)
+                    );
+                });
+
+                if (codeFiles.length === 0) {
+                    this.showQuestionFileError(fileViewer, `No code.js file found for ${questionName}`);
+                    return;
+                }
+
+                // Use the first matching code file
+                const codeFile = codeFiles[0];
+                const content = await codeFile.async('string');
+
+                const contentDisplay = fileViewer.querySelector('.question-file-content-display');
+                const header = contentDisplay.querySelector('.content-header');
+                const body = contentDisplay.querySelector('.content-body');
+
+                header.innerHTML = `<h6>📄 ${codeFile.name.split('/').pop()}</h6>`;
+                body.innerHTML = `<pre><code class="language-javascript">${this.escapeHtml(content)}</code></pre>`;
+
+                // Apply syntax highlighting
+                if (typeof hljs !== 'undefined') {
+                    const codeBlock = body.querySelector('code');
+                    if (codeBlock) {
+                        hljs.highlightElement(codeBlock);
+                    }
+                }
+            } else {
+                this.showQuestionFileError(fileViewer, 'File viewing functionality not available');
+            }
+        } catch (error) {
+            this.showQuestionFileError(fileViewer, `Error loading file: ${error.message}`);
+        }
+    }
+
+    showQuestionFileError(fileViewer, message) {
+        const contentDisplay = fileViewer.querySelector('.question-file-content-display');
+        const header = contentDisplay.querySelector('.content-header');
+        const body = contentDisplay.querySelector('.content-body');
+
+        header.innerHTML = '<h6>❌ Error</h6>';
+        body.innerHTML = `<p class="error-message">${message}</p>`;
+    }
+
+    escapeHtml(text) {
+        const div = this.domUtils.document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     renderFailedTestCases(failedTestCases, testCaseDetails) {

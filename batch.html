@@ -52,6 +52,22 @@
             <div id="detailedResults"></div>
         </div>
 
+        <!-- File Content Display Section -->
+        <div class="container file-content-section" id="fileContentSection" style="display: none">
+            <div class="file-content-header">
+                <h3>📂 File Structure</h3>
+                <button id="backToResultsBtn" class="btn btn-secondary btn--small">↑ Back to Results</button>
+            </div>
+            <div class="file-content" id="fileContent">
+                <div class="file-tree" id="fileTree"></div>
+
+                <div class="file-content-display">
+                    <div class="content-header" id="contentHeader"></div>
+                    <div class="content-body" id="contentBody"></div>
+                </div>
+            </div>
+        </div>
+
         <!-- Templates -->
         <template id="message-template">
             <div class="message"></div>
@@ -83,10 +99,12 @@
                 <div class="student-info" data-student-id="">
                     <span class="student-name"></span>
                     <span class="student-status"></span>
-                    <button class="expand-btn" data-expanded="false">
-                        <span class="expand-icon">▶</span>
-                        <span class="expand-text">Details</span>
-                    </button>
+                    <div class="student-actions">
+                        <button class="expand-btn" data-expanded="false">
+                            <span class="expand-icon">▶</span>
+                            <span class="expand-text">Details</span>
+                        </button>
+                    </div>
                 </div>
                 <div class="student-summary"></div>
                 <div class="student-detailed-results" style="display: none"></div>
@@ -132,7 +150,19 @@
             <div class="question-result">
                 <div class="question-header">
                     <span class="question-name"></span>
-                    <span class="question-score"></span>
+                    <div class="question-header-actions">
+                        <span class="question-score"></span>
+                        <button class="view-question-code-btn" data-question="">
+                            <span>👁️ See Code</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="question-file-viewer" style="display: none">
+                    <h5>📄 Code for this question</h5>
+                    <div class="question-file-content-display">
+                        <div class="content-header"></div>
+                        <div class="content-body"></div>
+                    </div>
                 </div>
                 <div class="test-cases-summary">
                     <span class="passed-tests"></span>
@@ -155,8 +185,35 @@
             </div>
         </template>
 
+        <!-- File Viewing Templates -->
+        <template id="file-item-template">
+            <div class="file-item">
+                <span class="file-icon"></span>
+                <span class="file-name"></span>
+                <span class="file-date"></span>
+                <span class="file-size"></span>
+                <div class="file-actions">
+                    <button class="btn btn--view">View</button>
+                    <button class="btn btn--download">Download</button>
+                </div>
+            </div>
+        </template>
+
+        <template id="binary-file-content-template">
+            <div class="binary-file-notice">
+                <p>Binary file (.<span class="file-type"></span>) - Download to view</p>
+            </div>
+        </template>
+
         <!-- Scripts -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+        <!-- Syntax Highlighting -->
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+        />
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
         <!-- Core Infrastructure -->
         <script src="js/config/app-config.js"></script>

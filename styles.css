@@ -227,6 +227,36 @@ h1 {
     background: #545b62;
 }
 
+.btn--view-files {
+    background: #17a2b8;
+    color: white;
+    margin: 10px 0;
+    padding: 8px 16px;
+    font-size: 14px;
+}
+
+.btn--view-files:hover {
+    background: #138496;
+}
+
+.btn--small {
+    padding: 4px 8px;
+    font-size: 11px;
+}
+
+.btn--view-code {
+    background: #6c757d;
+    color: white;
+}
+
+.btn--view-code:hover {
+    background: #545b62;
+}
+
+.btn-icon {
+    margin-right: 5px;
+}
+
 /* File Content Display */
 .file-content {
     display: none;
@@ -298,6 +328,98 @@ h1 {
     padding: 15px;
     font-weight: bold;
     border-bottom: 1px solid #ddd;
+}
+
+.test-actions {
+    padding: 10px 15px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #ddd;
+    text-align: center;
+}
+
+.test-file-viewer {
+    padding: 15px;
+    background: #ffffff;
+    border-bottom: 1px solid #ddd;
+}
+
+.test-file-viewer h4 {
+    margin: 0 0 15px 0;
+    color: #495057;
+    font-size: 16px;
+}
+
+.file-list {
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    overflow: hidden;
+}
+
+.file-item--code {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+    background: #ffffff;
+}
+
+.file-item--code:last-child {
+    border-bottom: none;
+}
+
+.file-item--code .file-icon {
+    margin-right: 12px;
+    font-size: 16px;
+}
+
+.file-item--code .file-name {
+    flex: 1;
+    font-weight: 500;
+    color: #495057;
+}
+
+.file-content-display {
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.file-content-display .content-header {
+    background: #f8f9fa;
+    padding: 10px 15px;
+    border-bottom: 1px solid #dee2e6;
+    margin-bottom: 0;
+}
+
+.file-content-display .content-header h5 {
+    margin: 0;
+    color: #495057;
+    font-size: 14px;
+}
+
+.file-content-display .content-body {
+    padding: 15px;
+    background: #ffffff;
+    max-height: 300px;
+    overflow-y: auto;
+    font-family: 'Courier New', Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.file-content-display .content-body pre {
+    margin: 0;
+    padding: 0;
+    background: none;
+    border: none;
+}
+
+.file-content-display .content-body code {
+    background: none;
+    padding: 0;
+    color: #333;
+}
 }
 
 .test-header--error {

@@ -110,6 +110,7 @@ class DependencyContainer {
                     container.get('batchProcessor'),
                     container.get('progressManager'),
                     container.get('resultsExporter'),
+                    container.get('fileViewer'),
                     document,
                     console,
                     FileReader,

@@ -107,7 +107,20 @@ class UploadHandler extends BaseUploadHandler {
             return a.name.localeCompare(b.name);
         });
 
-        sortedFiles.forEach((zipEntry) => {
+        // Filter to only show code.js files and their parent directories
+        const filteredFiles = sortedFiles.filter((zipEntry) => {
+            // Always show directories that contain code.js files
+            if (zipEntry.dir) {
+                const hasCodeFiles = sortedFiles.some(
+                    (file) => !file.dir && file.name.startsWith(zipEntry.name) && file.name.includes('code.js'),
+                );
+                return hasCodeFiles;
+            }
+            // Only show code.js files
+            return zipEntry.name.includes('code.js');
+        });
+
+        filteredFiles.forEach((zipEntry) => {
             const fileItem = this.createFileItem(zipEntry);
             fileTree.appendChild(fileItem);
             this.zipFiles.push(zipEntry);
