@@ -12,6 +12,16 @@ class AssignmentGrader {
         return path.replace(/\\/g, '/');
     }
 
+    // Ignore metadata folders that can appear in ZIPs created on macOS
+    isIgnoredZipMetadata(path) {
+        const normalizedPath = this.normalizePath(path);
+        return (
+            normalizedPath === '__MACOSX' ||
+            normalizedPath.startsWith('__MACOSX/') ||
+            normalizedPath.includes('/__MACOSX/')
+        );
+    }
+
     // Create regex pattern that matches both / and \ path separators
     createPathRegex(pattern) {
         return new RegExp(pattern.replace(/\//g, '[/\\\\]'));
@@ -19,7 +29,7 @@ class AssignmentGrader {
 
     // Detect if there's an extra parent folder containing all assignment files
     detectExtraFolder(zip) {
-        const files = Object.keys(zip.files);
+        const files = Object.keys(zip.files).filter((file) => !this.isIgnoredZipMetadata(file));
         const assignmentFiles = files.filter((file) => file.includes('code.js') || file.includes('testcases.js'));
 
         if (assignmentFiles.length === 0) {
@@ -59,7 +69,7 @@ class AssignmentGrader {
     }
 
     detectAssignmentStructure(zip) {
-        const files = Object.keys(zip.files);
+        const files = Object.keys(zip.files).filter((file) => !this.isIgnoredZipMetadata(file));
         const hasCodeFiles = files.some((file) => file.includes('code.js'));
         const hasTestFiles = files.some((file) => file.includes('testcases.js'));
         const questionFolderRegex = this.createPathRegex('/q\\d+/');
@@ -68,7 +78,7 @@ class AssignmentGrader {
     }
 
     analyzeZipStructure(zip) {
-        const files = Object.keys(zip.files);
+        const files = Object.keys(zip.files).filter((file) => !this.isIgnoredZipMetadata(file));
 
         const hasCodeFiles = files.some((file) => file.includes('code.js'));
         const hasTestFiles = files.some((file) => file.includes('testcases.js'));
@@ -181,7 +191,7 @@ class AssignmentGrader {
     }
 
     extractAssignmentStructure(zip) {
-        const files = Object.keys(zip.files);
+        const files = Object.keys(zip.files).filter((file) => !this.isIgnoredZipMetadata(file));
         const structure = [];
 
         // Detect base folder that should be stripped
