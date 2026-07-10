@@ -4,12 +4,12 @@ class AppConfig {
         CODE_EXECUTION: 2000,
         MESSAGE_DISPLAY: 5000,
         SUCCESS_MESSAGE: 3000,
-        BATCH_DELAY: 100,
+        BATCH_DELAY: 0,
     };
 
     static BATCH_SETTINGS = {
-        DEFAULT_BATCH_SIZE: 4,
-        MAX_BATCH_SIZE: 10,
+        DEFAULT_BATCH_SIZE: 8,
+        MAX_BATCH_SIZE: 16,
     };
 
     static FILE_EXTENSIONS = {

@@ -20,26 +20,31 @@ class TestExecutor {
                 return { error: `Failed to parse test cases: ${testModule.error}` };
             }
 
-            // Validate student code once before running any testcase in workers.
-            const codeValidation = this.parseCodeModule(codeContent);
-            if (!codeValidation.success) {
-                return { error: `Failed to parse student code: ${codeValidation.error}` };
-            }
-
             const { testcases, options = {} } = testModule.data;
+            let workerSession = null;
+
+            if (typeof Worker !== 'undefined') {
+                try {
+                    workerSession = await this.createWorkerSession(codeContent, testContent);
+                } catch (error) {
+                    return { error: `Failed to initialize worker runner: ${error.message}` };
+                }
+            } else {
+                // Validate student code once when worker execution is unavailable.
+                const codeValidation = this.parseCodeModule(codeContent);
+                if (!codeValidation.success) {
+                    return { error: `Failed to parse student code: ${codeValidation.error}` };
+                }
+            }
 
             for (let index = 0; index < testcases.length; index++) {
                 const testCase = testcases[index];
                 try {
                     const { input, expected, isPublic, description } = testCase;
 
-                    const workerResult = await this.executeTestCaseInWorker(
-                        codeContent,
-                        testContent,
-                        index,
-                        testCase,
-                        options,
-                    );
+                    const workerResult = workerSession
+                        ? await this.runTestCaseInWorkerSession(workerSession, index)
+                        : this.executeTestCaseInMainThread(codeContent, testCase, options);
 
                     let passed;
                     let actualResults;
@@ -84,43 +89,78 @@ class TestExecutor {
                     });
                     testResults.failed++;
                 }
+
+                if (workerSession?.terminated) {
+                    try {
+                        workerSession = await this.createWorkerSession(codeContent, testContent);
+                    } catch {
+                        workerSession = null;
+                    }
+                }
             }
 
             return testResults;
         } catch (error) {
             return { error: `Test execution failed: ${error.message}` };
+        } finally {
+            this.terminateWorkerSession();
         }
     }
 
-    executeTestCaseInWorker(codeContent, testContent, testCaseIndex, fallbackTestCase, fallbackOptions) {
+    async createWorkerSession(codeContent, testContent) {
+        this.terminateWorkerSession();
+
+        const session = {
+            worker: new Worker(this.workerScriptPath),
+            timeoutMs: AppConfig.TIMEOUTS.CODE_EXECUTION,
+            terminated: false,
+        };
+
+        try {
+            await this.sendWorkerRequest(session, {
+                type: 'INIT',
+                codeContent,
+                testContent,
+                timeoutMs: session.timeoutMs,
+            });
+            this.activeWorkerSession = session;
+            return session;
+        } catch (error) {
+            session.terminated = true;
+            session.worker.terminate();
+            throw error;
+        }
+    }
+
+    runTestCaseInWorkerSession(session, testCaseIndex) {
+        return this.sendWorkerRequest(session, {
+            type: 'RUN_CASE',
+            testCaseIndex,
+        });
+    }
+
+    sendWorkerRequest(session, payload) {
         return new Promise((resolve, reject) => {
-            if (typeof Worker === 'undefined') {
-                try {
-                    const fallbackResult = this.executeTestCaseInMainThread(
-                        codeContent,
-                        fallbackTestCase,
-                        fallbackOptions,
-                    );
-                    resolve(fallbackResult);
-                } catch (error) {
-                    reject(error);
-                }
+            if (!session || session.terminated) {
+                reject(new Error('Worker session is not available'));
                 return;
             }
 
-            const worker = new Worker(this.workerScriptPath);
-            const timeoutMs = AppConfig.TIMEOUTS.CODE_EXECUTION;
+            const { worker, timeoutMs } = session;
             let isSettled = false;
 
             const cleanup = () => {
                 if (!isSettled) {
                     isSettled = true;
-                    worker.terminate();
+                    worker.onmessage = null;
+                    worker.onerror = null;
                 }
             };
 
             const timeoutId = setTimeout(() => {
                 cleanup();
+                session.terminated = true;
+                worker.terminate();
                 reject(new Error(`Time Limit Exceeded: Code execution timed out after ${timeoutMs}ms`));
             }, timeoutMs);
 
@@ -148,16 +188,21 @@ class TestExecutor {
 
                 clearTimeout(timeoutId);
                 cleanup();
+                session.terminated = true;
+                worker.terminate();
                 reject(new Error(errorEvent.message || 'Worker execution failed'));
             };
 
-            worker.postMessage({
-                codeContent,
-                testContent,
-                testCaseIndex,
-                timeoutMs,
-            });
+            worker.postMessage(payload);
         });
+    }
+
+    terminateWorkerSession() {
+        if (this.activeWorkerSession && !this.activeWorkerSession.terminated) {
+            this.activeWorkerSession.terminated = true;
+            this.activeWorkerSession.worker.terminate();
+        }
+        this.activeWorkerSession = null;
     }
 
     executeTestCaseInMainThread(codeContent, testCase, options) {

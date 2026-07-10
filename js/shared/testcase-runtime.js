@@ -176,6 +176,14 @@
 
         const executableFn = applyMonkeyPatchIfNeeded(codeFunction.fn, options);
 
+        return executePreparedTestCase(executableFn, testCase, options);
+    }
+
+    function executePreparedTestCase(executableFn, testCase, options) {
+        if (typeof executableFn !== 'function') {
+            throw new Error('Executable function is not initialized');
+        }
+
         if (options.type === 'commands') {
             return runCommandBasedTest(executableFn, testCase, compareResults);
         }
@@ -199,5 +207,6 @@
         resolveMonkeyPatch,
         applyMonkeyPatchIfNeeded,
         executeSingleTestCase,
+        executePreparedTestCase,
     };
 })(typeof self !== 'undefined' ? self : globalThis);
