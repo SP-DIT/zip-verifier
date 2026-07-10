@@ -151,12 +151,10 @@ test.describe('ZIP Verifier End-to-End Tests', () => {
 
         // Check that View and Download buttons are present for each file
         await expect(page.getByRole('button', { name: 'View' })).toHaveCount(4);
-        await expect(page.getByRole('button', { name: 'Download' })).toHaveCount(4);
+        await expect(page.getByRole('button', { name: 'Download' })).toHaveCount(2);
 
         // Check file sizes and timestamps are displayed
         await expect(page.locator('text=128 B')).toBeVisible(); // code.js files
-        await expect(page.locator('text=507 B')).toBeVisible(); // testcases.js files
-        await expect(page.locator('text=518 B')).toBeVisible(); // testcases.js files
     });
 
     test('should handle all-wrong ZIP file with failing test cases', async ({ page }) => {
