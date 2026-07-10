@@ -33,7 +33,7 @@ class TestRunnerService {
         const codeContent = await zip.file(questionItem.codeFile).async('string');
         const testContent = await zip.file(questionItem.testFile).async('string');
 
-        const results = this.testExecutor.executeTests(codeContent, testContent);
+        const results = await this.testExecutor.executeTests(codeContent, testContent);
 
         return {
             status: results.error ? 'error' : results.failed === 0 ? 'passed' : 'partial',

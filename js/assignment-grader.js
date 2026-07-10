@@ -329,7 +329,7 @@ class AssignmentGrader {
             const codeContent = await zip.file(item.codeFile).async('string');
             const testContent = await zip.file(item.testFile).async('string');
 
-            const results = this.testExecutor.executeTests(codeContent, testContent);
+            const results = await this.testExecutor.executeTests(codeContent, testContent);
             this.displayTestResults(container, results);
         } catch (error) {
             this.setErrorCase(container, `Error: ${error.message}`);

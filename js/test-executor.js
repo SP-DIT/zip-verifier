@@ -2,9 +2,10 @@
 class TestExecutor {
     constructor(consoleManager) {
         this.consoleManager = consoleManager;
+        this.workerScriptPath = 'js/testcase-worker.js';
     }
 
-    executeTests(codeContent, testContent) {
+    async executeTests(codeContent, testContent) {
         try {
             const testResults = {
                 passed: 0,
@@ -18,51 +19,37 @@ class TestExecutor {
                 return { error: `Failed to parse test cases: ${testModule.error}` };
             }
 
-            const codeFunction = this.parseCodeModule(codeContent);
-            if (!codeFunction.success) {
-                return { error: `Failed to parse student code: ${codeFunction.error}` };
+            // Validate student code once before running any testcase in workers.
+            const codeValidation = this.parseCodeModule(codeContent);
+            if (!codeValidation.success) {
+                return { error: `Failed to parse student code: ${codeValidation.error}` };
             }
 
             const { testcases, options = {} } = testModule.data;
 
-            testcases.forEach((testCase, index) => {
+            for (let index = 0; index < testcases.length; index++) {
+                const testCase = testcases[index];
                 try {
                     const { input, expected, isPublic, description } = testCase;
 
-                    // Monkey patch console.log during test execution
-                    this.consoleManager.silence();
-
-                    let result;
-                    try {
-                        // Handle commands-based testing
-                        if (options.type === 'commands') {
-                            result = this.runCommandBasedTest(codeFunction.fn, testCase);
-                        } else {
-                            // Handle regular testing (non-commands)
-                            result = this.executeWithTimeout(codeFunction.fn, input);
-                        }
-                    } finally {
-                        // Always restore original console.log
-                        this.consoleManager.restore();
-                    }
+                    const workerResult = await this.executeTestCaseInWorker(codeContent, testCase, options);
 
                     let passed;
                     let actualResults;
 
-                    // For command-based tests, the result object has a 'passed' property
                     if (options.type === 'commands') {
-                        passed = result.passed;
-                        actualResults = result.actual;
+                        passed = workerResult.passed;
+                        actualResults = workerResult.actual;
                     } else {
-                        passed = this.compareResults(result, expected, options);
-                        actualResults = result;
+                        passed = this.compareResults(workerResult.actual, expected, options);
+                        actualResults = workerResult.actual;
                     }
 
                     testResults.testCases.push({
                         index: index + 1,
                         passed,
                         input,
-                        expected: options.type === 'commands' ? result.expected : expected,
+                        expected: options.type === 'commands' ? workerResult.expected : expected,
                         actual: actualResults,
                         isPublic,
                         description,
@@ -79,7 +66,10 @@ class TestExecutor {
                         index: index + 1,
                         passed: false,
                         input: testCase.input,
-                        expected: options.type === 'commands' ? testCase.expected.map((e) => e.value) : testCase.expected,
+                        expected:
+                            options.type === 'commands' && Array.isArray(testCase.expected)
+                                ? testCase.expected.map((e) => e.value)
+                                : testCase.expected,
                         actual: null,
                         isPublic: testCase.isPublic,
                         description: testCase.description,
@@ -87,11 +77,98 @@ class TestExecutor {
                     });
                     testResults.failed++;
                 }
-            });
+            }
 
             return testResults;
         } catch (error) {
             return { error: `Test execution failed: ${error.message}` };
+        }
+    }
+
+    executeTestCaseInWorker(codeContent, testCase, options) {
+        return new Promise((resolve, reject) => {
+            if (typeof Worker === 'undefined') {
+                try {
+                    const fallbackResult = this.executeTestCaseInMainThread(codeContent, testCase, options);
+                    resolve(fallbackResult);
+                } catch (error) {
+                    reject(error);
+                }
+                return;
+            }
+
+            const worker = new Worker(this.workerScriptPath);
+            const timeoutMs = AppConfig.TIMEOUTS.CODE_EXECUTION;
+            let isSettled = false;
+
+            const cleanup = () => {
+                if (!isSettled) {
+                    isSettled = true;
+                    worker.terminate();
+                }
+            };
+
+            const timeoutId = setTimeout(() => {
+                cleanup();
+                reject(new Error(`Time Limit Exceeded: Code execution timed out after ${timeoutMs}ms`));
+            }, timeoutMs);
+
+            worker.onmessage = (event) => {
+                if (isSettled) {
+                    return;
+                }
+
+                clearTimeout(timeoutId);
+                cleanup();
+
+                const response = event.data || {};
+                if (!response.success) {
+                    reject(new Error(response.error || 'Unknown worker execution error'));
+                    return;
+                }
+
+                resolve(response.result);
+            };
+
+            worker.onerror = (errorEvent) => {
+                if (isSettled) {
+                    return;
+                }
+
+                clearTimeout(timeoutId);
+                cleanup();
+                reject(new Error(errorEvent.message || 'Worker execution failed'));
+            };
+
+            worker.postMessage({
+                codeContent,
+                testCase,
+                options,
+                timeoutMs,
+            });
+        });
+    }
+
+    executeTestCaseInMainThread(codeContent, testCase, options) {
+        const codeFunction = this.parseCodeModule(codeContent);
+        if (!codeFunction.success) {
+            throw new Error(`Failed to parse student code: ${codeFunction.error}`);
+        }
+
+        this.consoleManager.silence();
+        try {
+            if (options.type === 'commands') {
+                return this.runCommandBasedTest(codeFunction.fn, testCase);
+            }
+
+            const actual = this.executeWithTimeout(codeFunction.fn, testCase.input);
+            return {
+                passed: this.compareResults(actual, testCase.expected, options),
+                expected: testCase.expected,
+                actual,
+            };
+        } finally {
+            this.consoleManager.restore();
         }
     }
 
