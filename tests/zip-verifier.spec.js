@@ -128,6 +128,14 @@ test.describe('ZIP Verifier End-to-End Tests', () => {
         await expect(page.locator('.zip-filename:has-text("all-correct.zip")')).toBeVisible();
     });
 
+    test('should ignore the SKIP_SAMPLE_TESTS sample guard', async ({ page }) => {
+        await uploadZipFile(page, 'single with debug skipper.zip');
+
+        await verifyQuestionResult(page, 0, '✅ Accepted', 10, 10);
+        await verifyQuestionResult(page, 1, '✅ Accepted', 10, 10);
+        await verifyQuestionResult(page, 2, '✅ Accepted', 10, 10);
+    });
+
     test('should display ZIP file information correctly', async ({ page }) => {
         // Click Choose File and upload
         await page.getByRole('button', { name: 'Choose File' }).click();

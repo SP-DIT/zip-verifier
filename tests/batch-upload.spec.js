@@ -10,6 +10,11 @@ test.describe('Batch Upload Tests', () => {
     // Test fixtures paths - using local workspace files
     const BULK_ZIP_PATH = path.resolve(__dirname, 'fixtures', 'bulk.zip');
     const LMS_EXPORT_PATH = path.resolve(__dirname, 'fixtures', 'sample LMS export.zip');
+    const DEBUG_SKIPPER_LMS_EXPORT_PATH = path.resolve(
+        __dirname,
+        'fixtures',
+        'sample LMS export with debug skipper.zip',
+    );
 
     test.beforeEach(async ({ page }) => {
         // Navigate to batch processor page
@@ -45,12 +50,14 @@ test.describe('Batch Upload Tests', () => {
     });
 
     test('should process sample LMS export.zip successfully', async ({ page }) => {
+        test.setTimeout(60000);
+
         // Upload LMS export file
         await page.locator('#bulkFileInput').setInputFiles(LMS_EXPORT_PATH);
         await page.locator('#bulkSubmitFile button[type="submit"]').click();
 
         // Wait for processing to complete (longer timeout for larger file)
-        await expect(page.locator('#progressPercentage')).toHaveText('100%', { timeout: 180000 });
+        await expect(page.locator('#progressPercentage')).toHaveText('100%', { timeout: 60000 });
 
         // Verify results
         await expect(page.locator('#batchResultsContainer')).toBeVisible();
@@ -71,5 +78,12 @@ test.describe('Batch Upload Tests', () => {
         // LMS submissions should contain student IDs and scores
         const firstStudentSummary = page.locator('.student-summary').first();
         await expect(firstStudentSummary).toContainText(/Score: \d+%/);
+    });
+
+    test('should ignore the SKIP_SAMPLE_TESTS sample guard', async ({ page }) => {
+        await page.locator('#bulkFileInput').setInputFiles(DEBUG_SKIPPER_LMS_EXPORT_PATH);
+        await page.locator('#bulkSubmitFile button[type="submit"]').click();
+
+        await expect(page.locator('#progressPercentage')).toHaveText('100%', { timeout: 360000 });
     });
 });

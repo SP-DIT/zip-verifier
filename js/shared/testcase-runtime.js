@@ -103,7 +103,12 @@
             }
 
             const functionName = exportMatch[1];
-            const codeWithoutExports = codeContent.replace(/module\.exports\s*=.*?;?/g, '');
+
+            const codeWithoutSkipSampleGuard = codeContent.replace(
+                /if\s*\(\s*process\.env\.SKIP_SAMPLE_TESTS\s*===\s*['"]true['"]\s*\)\s*return\s*;/g,
+                "// if (process.env.SKIP_SAMPLE_TESTS === 'true') return;",
+            );
+            const codeWithoutExports = codeWithoutSkipSampleGuard.replace(/module\.exports\s*=.*?;?/g, '');
             const instrumentedCode = runtimeOptions.instrumentLoops
                 ? instrumentCodeWithTimeoutChecks(codeWithoutExports)
                 : codeWithoutExports;
